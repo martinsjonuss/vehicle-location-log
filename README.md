@@ -1,54 +1,55 @@
 # Vehicle Location Log
 
-Mobile-friendly static demo for logging and searching the last known location of vehicles within a dealership, compound, or storage area.
+Mobile-friendly static MVP for logging and searching the last known location of vehicles within a dealership, compound, or storage area.
 
-## Purpose
+## Core problem
 
-The current dealership workflow may record where a vehicle was first parked, but the vehicle can later be moved by several people:
+A vehicle can be moved by several people after check-in:
 
 - drive-thru host
-- technician
+- mechanic
+- service advisor
+- sales team
 - valet / wash team
-- service team
-- another staff member moving blocked vehicles
+- anyone moving blocked vehicles
 
-The original key tag or location note can quickly become stale. This demo focuses on the core idea:
+The original key tag or first parking location can become stale. This prototype uses a simple rule:
 
-> Whoever parks the vehicle updates the latest location. The newest saved record becomes the source of truth.
+> Whoever parks the vehicle updates the app. The newest saved record becomes the source of truth.
 
-## What the demo does
+## Current demo features
 
-- Enter a vehicle registration
-- Capture the phone/browser current GPS location
-- Save status as `IN`
-- Mark a vehicle as `OUT`
-- Search a registration
-- Show latest known status
-- Show last updated timestamp
-- Show who updated it
-- Open saved GPS location in Google Maps
-- Show recent movement history
+- Check in a vehicle
+- Capture phone/browser GPS location
+- Search by registration
+- Show current status: IN / OUT
+- Show current stage, e.g. Checked In, In Workshop, Waiting for Valet, Ready for Customer
+- Open latest GPS location in Google Maps
+- Update location without retyping the registration after searching
+- Mark vehicle as OUT with one click
+- View clickable per-vehicle movement history
+- View recent activity log
+- Store records locally using `localStorage`
 
 ## Important
 
-This is a prototype only.
+This is a static prototype only.
 
 - No backend
 - No real database
 - No customer information
 - No dealership system integration
-- Records are stored in browser `localStorage`
-- Data only exists on the device/browser used
+- Data is stored only on the device/browser used
 
 ## Hosting
 
-This can be hosted as a static site using:
+Can be hosted using:
 
 - GitHub Pages
 - Netlify
 - Vercel
 
-GPS location capture requires HTTPS. GitHub Pages provides HTTPS.
+GPS requires HTTPS. GitHub Pages provides HTTPS.
 
 ## Project structure
 
@@ -67,30 +68,35 @@ vehicle-location-log/
 ## MVP workflow
 
 ```text
-Vehicle parked
+Customer arrives
 ↓
-Staff opens web app
+Drive-thru host checks vehicle in
 ↓
-Enter registration
+Host parks vehicle and saves GPS location
 ↓
-Tap Save Current Location
+Mechanic searches registration
 ↓
-GPS + timestamp + staff name are saved
+Mechanic opens location and finds vehicle
 ↓
-Next person searches registration
+Mechanic completes work and parks vehicle
 ↓
-Tap Open Location in Google Maps
+Mechanic updates location/stage
+↓
+Next person sees latest location
 ```
 
-## Future enhancements
+## Suggested future features
 
-Possible later features:
-
-- Real shared database
+- Shared database
 - Staff login
-- Shared records across devices
-- Car park zone names
+- Real-time sync across devices
 - Damage recording with car body diagram
 - Photo upload for damage evidence
 - Number plate OCR
-- Dashboard for vehicles currently IN / OUT
+- Department-specific views
+- Filter by stage/status
+
+## v2.1 update
+
+- Mark Out is now one-click.
+- Mark Out button is hidden when a vehicle is already OUT.

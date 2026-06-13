@@ -2,13 +2,15 @@
   {
     "registration": "AB12 CDE",
     "status": "IN",
+    "stage": "Checked In",
     "vehicleType": "Customer vehicle",
-    "note": "Example only - use the app to save real demo records locally."
+    "note": "Example placeholder only. Demo records are saved in browser localStorage."
   },
   {
     "registration": "LR24 DEMO",
-    "status": "OUT",
+    "status": "IN",
+    "stage": "Ready for Customer",
     "vehicleType": "Loan / courtesy car",
-    "note": "Sample data file for future development."
+    "note": "Sample for future shared database development."
   }
 ]
