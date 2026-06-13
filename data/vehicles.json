@@ -1,1 +1,14 @@
-[]
+[
+  {
+    "registration": "AB12 CDE",
+    "status": "IN",
+    "vehicleType": "Customer vehicle",
+    "note": "Example only - use the app to save real demo records locally."
+  },
+  {
+    "registration": "LR24 DEMO",
+    "status": "OUT",
+    "vehicleType": "Loan / courtesy car",
+    "note": "Sample data file for future development."
+  }
+]
