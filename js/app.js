@@ -1,21 +1,30 @@
-const STORAGE_KEY = "vehicleLocationLogRecords";
+const STORAGE_KEY = "vehicleLocationLogRecordsV2";
 
-const saveView = document.getElementById("saveView");
-const searchView = document.getElementById("searchView");
-const showSaveViewBtn = document.getElementById("showSaveViewBtn");
-const showSearchViewBtn = document.getElementById("showSearchViewBtn");
+const checkInTab = document.getElementById("checkInTab");
+const findTab = document.getElementById("findTab");
+const checkInView = document.getElementById("checkInView");
+const findView = document.getElementById("findView");
+const updatePanel = document.getElementById("updatePanel");
 
-const saveLocationForm = document.getElementById("saveLocationForm");
-const regInput = document.getElementById("regInput");
-const staffInput = document.getElementById("staffInput");
-const vehicleTypeInput = document.getElementById("vehicleTypeInput");
-const noteInput = document.getElementById("noteInput");
-const markOutBtn = document.getElementById("markOutBtn");
+const checkInForm = document.getElementById("checkInForm");
+const checkInReg = document.getElementById("checkInReg");
+const checkInStaff = document.getElementById("checkInStaff");
+const checkInType = document.getElementById("checkInType");
+const checkInNote = document.getElementById("checkInNote");
 
 const searchForm = document.getElementById("searchForm");
-const searchInput = document.getElementById("searchInput");
+const searchReg = document.getElementById("searchReg");
 const vehicleResult = document.getElementById("vehicleResult");
-const historyList = document.getElementById("historyList");
+
+const updateForm = document.getElementById("updateForm");
+const updateTitle = document.getElementById("updateTitle");
+const updateReg = document.getElementById("updateReg");
+const updateStaff = document.getElementById("updateStaff");
+const updateStage = document.getElementById("updateStage");
+const updateNote = document.getElementById("updateNote");
+const cancelUpdateBtn = document.getElementById("cancelUpdateBtn");
+
+const activityList = document.getElementById("activityList");
 const clearDemoBtn = document.getElementById("clearDemoBtn");
 
 function getRecords() {
@@ -40,29 +49,38 @@ function formatTime(isoString) {
   });
 }
 
-function switchView(viewName) {
-  const saveActive = viewName === "save";
-  saveView.classList.toggle("hidden", !saveActive);
-  searchView.classList.toggle("hidden", saveActive);
-  showSaveViewBtn.classList.toggle("active", saveActive);
-  showSearchViewBtn.classList.toggle("active", !saveActive);
+function switchMainView(viewName) {
+  const checkInActive = viewName === "checkin";
+  checkInView.classList.toggle("hidden", !checkInActive);
+  findView.classList.toggle("hidden", checkInActive);
+  checkInTab.classList.toggle("active", checkInActive);
+  findTab.classList.toggle("active", !checkInActive);
 }
 
-function createBaseRecord(status, position = null) {
-  const reg = normaliseReg(regInput.value);
+function getLatestRecord(reg) {
+  const cleaned = normaliseReg(reg);
+  return getRecords().slice().reverse().find(r => r.reg === cleaned);
+}
 
-  if (!reg) {
-    alert("Enter a vehicle registration first.");
-    return null;
-  }
+function getVehicleHistory(reg) {
+  const cleaned = normaliseReg(reg);
+  return getRecords().filter(r => r.reg === cleaned).slice().reverse();
+}
 
+function mapsUrl(record) {
+  return `https://www.google.com/maps?q=${record.lat},${record.lng}`;
+}
+
+function buildRecord({ reg, staff, vehicleType, stage, note, status, action, position }) {
   return {
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
-    reg,
+    reg: normaliseReg(reg),
+    staff: staff.trim() || "Demo User",
+    vehicleType: vehicleType || "Customer vehicle",
+    stage,
+    note: note.trim(),
     status,
-    staff: staffInput.value.trim() || "Demo User",
-    vehicleType: vehicleTypeInput.value,
-    note: noteInput.value.trim(),
+    action,
     lat: position ? position.coords.latitude : null,
     lng: position ? position.coords.longitude : null,
     accuracy: position ? position.coords.accuracy : null,
@@ -70,32 +88,41 @@ function createBaseRecord(status, position = null) {
   };
 }
 
-function storeRecord(record) {
+function addRecord(record) {
   const records = getRecords();
   records.push(record);
   saveRecords(records);
-  renderHistory();
-  renderVehicleResult(getLatestRecordByReg(record.reg));
+  renderActivity();
+  renderVehicleResult(getLatestRecord(record.reg));
 }
 
-function getLatestRecordByReg(reg) {
-  const cleanedReg = normaliseReg(reg);
-  return getRecords()
-    .slice()
-    .reverse()
-    .find(record => record.reg === cleanedReg);
-}
+function captureLocation(successCallback, button) {
+  if (!navigator.geolocation) {
+    alert("This browser does not support GPS location capture.");
+    return;
+  }
 
-function getRegHistory(reg) {
-  const cleanedReg = normaliseReg(reg);
-  return getRecords()
-    .filter(record => record.reg === cleanedReg)
-    .slice()
-    .reverse();
-}
+  const originalText = button.textContent;
+  button.textContent = "Getting GPS...";
+  button.disabled = true;
 
-function mapsUrl(record) {
-  return `https://www.google.com/maps?q=${record.lat},${record.lng}`;
+  navigator.geolocation.getCurrentPosition(
+    position => {
+      button.textContent = originalText;
+      button.disabled = false;
+      successCallback(position);
+    },
+    error => {
+      button.textContent = originalText;
+      button.disabled = false;
+      alert(`Location could not be captured: ${error.message}`);
+    },
+    {
+      enableHighAccuracy: true,
+      timeout: 12000,
+      maximumAge: 0
+    }
+  );
 }
 
 function renderVehicleResult(record) {
@@ -105,9 +132,9 @@ function renderVehicleResult(record) {
     return;
   }
 
+  const history = getVehicleHistory(record.reg);
   const hasLocation = record.lat !== null && record.lng !== null;
   const statusClass = record.status === "IN" ? "status-in" : "status-out";
-  const history = getRegHistory(record.reg);
 
   vehicleResult.className = "vehicle-result";
   vehicleResult.innerHTML = `
@@ -121,145 +148,225 @@ function renderVehicleResult(record) {
 
     <div class="detail-grid">
       <div class="detail-card">
+        <div class="detail-label">Current stage</div>
+        <p class="detail-value">${record.stage}</p>
+      </div>
+      <div class="detail-card">
         <div class="detail-label">Last updated</div>
         <p class="detail-value">${formatTime(record.createdAt)}</p>
       </div>
-
       <div class="detail-card">
         <div class="detail-label">Updated by</div>
         <p class="detail-value">${record.staff}</p>
       </div>
-
       <div class="detail-card">
         <div class="detail-label">GPS accuracy</div>
         <p class="detail-value">${hasLocation ? `Approx. ${Math.round(record.accuracy)}m` : "No location saved"}</p>
       </div>
-
       <div class="detail-card">
         <div class="detail-label">Note</div>
         <p class="detail-value">${record.note || "No note added"}</p>
       </div>
+      <button class="detail-card history-toggle" data-action="toggle-history" data-reg="${record.reg}">
+        <div class="detail-label">Movement history</div>
+        <p class="detail-value">${history.length} saved movement${history.length === 1 ? "" : "s"}</p>
+      </button>
     </div>
 
-    ${hasLocation ? `<a class="maps-button" href="${mapsUrl(record)}" target="_blank" rel="noopener">Open Location in Google Maps</a>` : ""}
-
-    <div class="detail-card" style="margin-top: 14px;">
-      <div class="detail-label">Movement history</div>
-      <p class="detail-value">${history.length} saved movement${history.length === 1 ? "" : "s"}</p>
+    <div class="result-actions">
+      ${hasLocation ? `<a class="maps-button" href="${mapsUrl(record)}" target="_blank" rel="noopener">Open Location</a>` : ""}
+      ${record.status === "IN" ? `<button class="primary-button" data-action="update-location" data-reg="${record.reg}">Update Location</button>` : ""}
+      ${record.status === "IN" ? `<button class="secondary-button" data-action="mark-out" data-reg="${record.reg}">Mark Out</button>` : ""}
     </div>
+
+    <div id="vehicleHistoryPanel" class="vehicle-history hidden"></div>
   `;
 
-  searchInput.value = record.reg;
-  switchView("search");
+  const updateButton = vehicleResult.querySelector("[data-action='update-location']");
+  const markOutButton = vehicleResult.querySelector("[data-action='mark-out']");
+  const historyButton = vehicleResult.querySelector("[data-action='toggle-history']");
+
+  if (updateButton) {
+    updateButton.addEventListener("click", () => openUpdatePanel(record.reg));
+  }
+
+  if (markOutButton) {
+    markOutButton.addEventListener("click", () => markVehicleOut(record.reg));
+  }
+
+  if (historyButton) {
+    historyButton.addEventListener("click", () => toggleVehicleHistory(record.reg));
+  }
+
+  searchReg.value = record.reg;
+  switchMainView("find");
 }
 
-function renderHistory() {
+function openUpdatePanel(reg) {
+  const latest = getLatestRecord(reg);
+  if (!latest) return;
+
+  updateReg.value = latest.reg;
+  updateStaff.value = latest.staff === "Demo User" ? "" : latest.staff;
+  updateNote.value = "";
+  updateStage.value = "Moved / Reparked";
+  updateTitle.textContent = `Update ${latest.reg}`;
+  updatePanel.classList.remove("hidden");
+  updatePanel.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function toggleVehicleHistory(reg) {
+  const panel = document.getElementById("vehicleHistoryPanel");
+  const history = getVehicleHistory(reg);
+
+  if (!panel) return;
+
+  if (!panel.classList.contains("hidden")) {
+    panel.classList.add("hidden");
+    panel.innerHTML = "";
+    return;
+  }
+
+  panel.classList.remove("hidden");
+  panel.innerHTML = history.map(record => `
+    <article class="history-card">
+      <div class="history-top">
+        <span class="history-reg">${record.stage}</span>
+        <span class="history-time">${formatTime(record.createdAt)}</span>
+      </div>
+      <p class="history-note">
+        ${record.action} by ${record.staff}
+        ${record.accuracy ? ` · GPS approx. ${Math.round(record.accuracy)}m` : ""}
+        ${record.note ? ` · ${record.note}` : ""}
+      </p>
+    </article>
+  `).join("");
+}
+
+function markVehicleOut(reg) {
+  const latest = getLatestRecord(reg);
+  if (!latest || latest.status === "OUT") return;
+
+  const record = buildRecord({
+    reg: latest.reg,
+    staff: latest.staff || "Demo User",
+    vehicleType: latest.vehicleType,
+    stage: "Out",
+    note: "",
+    status: "OUT",
+    action: "Marked out",
+    position: null
+  });
+
+  addRecord(record);
+}
+
+function renderActivity() {
   const records = getRecords().slice().reverse();
 
   if (records.length === 0) {
-    historyList.innerHTML = `<div class="empty-state">No demo vehicle movements saved yet.</div>`;
+    activityList.innerHTML = `<div class="empty-state">No demo activity saved yet.</div>`;
     return;
   }
 
-  historyList.innerHTML = records
-    .map(record => {
-      const statusLabel = record.status === "IN" ? "Location updated" : "Marked out";
-      const accuracy = record.accuracy ? ` · ${Math.round(record.accuracy)}m approx.` : "";
-      return `
-        <article class="history-card" data-reg="${record.reg}">
-          <div class="history-top">
-            <span class="history-reg">${record.reg}</span>
-            <span class="history-time">${formatTime(record.createdAt)}</span>
-          </div>
-          <p class="history-note">
-            ${statusLabel} by ${record.staff}${accuracy}
-            ${record.note ? ` · ${record.note}` : ""}
-          </p>
-        </article>
-      `;
-    })
-    .join("");
+  activityList.innerHTML = records.map(record => `
+    <article class="history-card" data-reg="${record.reg}">
+      <div class="history-top">
+        <span class="history-reg">${record.reg}</span>
+        <span class="history-time">${formatTime(record.createdAt)}</span>
+      </div>
+      <p class="history-note">
+        ${record.action} · ${record.stage} · ${record.staff}
+        ${record.note ? ` · ${record.note}` : ""}
+      </p>
+    </article>
+  `).join("");
 
-  document.querySelectorAll(".history-card").forEach(card => {
-    card.addEventListener("click", () => {
-      renderVehicleResult(getLatestRecordByReg(card.dataset.reg));
-    });
+  document.querySelectorAll("#activityList .history-card").forEach(card => {
+    card.addEventListener("click", () => renderVehicleResult(getLatestRecord(card.dataset.reg)));
   });
 }
 
-function resetForm() {
-  regInput.value = "";
-  noteInput.value = "";
-}
+checkInTab.addEventListener("click", () => switchMainView("checkin"));
+findTab.addEventListener("click", () => switchMainView("find"));
 
-showSaveViewBtn.addEventListener("click", () => switchView("save"));
-showSearchViewBtn.addEventListener("click", () => switchView("search"));
-
-saveLocationForm.addEventListener("submit", event => {
+checkInForm.addEventListener("submit", event => {
   event.preventDefault();
 
-  if (!navigator.geolocation) {
-    alert("This browser does not support GPS location capture.");
+  const reg = normaliseReg(checkInReg.value);
+  if (!reg) {
+    alert("Enter a vehicle registration first.");
     return;
   }
 
-  const submitButton = saveLocationForm.querySelector("button[type='submit']");
-  submitButton.textContent = "Getting GPS...";
-  submitButton.disabled = true;
+  const button = checkInForm.querySelector("button[type='submit']");
+  captureLocation(position => {
+    const record = buildRecord({
+      reg,
+      staff: checkInStaff.value,
+      vehicleType: checkInType.value,
+      stage: "Checked In",
+      note: checkInNote.value,
+      status: "IN",
+      action: "Checked in",
+      position
+    });
 
-  navigator.geolocation.getCurrentPosition(
-    position => {
-      const record = createBaseRecord("IN", position);
-      submitButton.textContent = "Save Current Location";
-      submitButton.disabled = false;
-
-      if (!record) return;
-
-      storeRecord(record);
-      resetForm();
-    },
-    error => {
-      submitButton.textContent = "Save Current Location";
-      submitButton.disabled = false;
-      alert(`Location could not be captured: ${error.message}`);
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 12000,
-      maximumAge: 0
-    }
-  );
-});
-
-markOutBtn.addEventListener("click", () => {
-  const record = createBaseRecord("OUT", null);
-  if (!record) return;
-
-  storeRecord(record);
-  resetForm();
+    addRecord(record);
+    checkInReg.value = "";
+    checkInNote.value = "";
+  }, button);
 });
 
 searchForm.addEventListener("submit", event => {
   event.preventDefault();
 
-  const reg = normaliseReg(searchInput.value);
-
+  const reg = normaliseReg(searchReg.value);
   if (!reg) {
     alert("Enter a registration to search.");
     return;
   }
 
-  renderVehicleResult(getLatestRecordByReg(reg));
+  renderVehicleResult(getLatestRecord(reg));
+});
+
+updateForm.addEventListener("submit", event => {
+  event.preventDefault();
+
+  const latest = getLatestRecord(updateReg.value);
+  if (!latest) return;
+
+  const button = updateForm.querySelector("button[type='submit']");
+  captureLocation(position => {
+    const record = buildRecord({
+      reg: latest.reg,
+      staff: updateStaff.value,
+      vehicleType: latest.vehicleType,
+      stage: updateStage.value,
+      note: updateNote.value,
+      status: "IN",
+      action: "Location updated",
+      position
+    });
+
+    addRecord(record);
+    updatePanel.classList.add("hidden");
+    updateNote.value = "";
+  }, button);
+});
+
+cancelUpdateBtn.addEventListener("click", () => {
+  updatePanel.classList.add("hidden");
 });
 
 clearDemoBtn.addEventListener("click", () => {
-  const confirmed = confirm("Clear all demo records from this device?");
-  if (!confirmed) return;
+  if (!confirm("Clear all demo records from this device?")) return;
 
   localStorage.removeItem(STORAGE_KEY);
-  renderHistory();
+  renderActivity();
   vehicleResult.className = "vehicle-result empty";
-  vehicleResult.innerHTML = "<p>Search for a registration to see the latest saved location.</p>";
+  vehicleResult.innerHTML = "<p>Search for a registration to view the latest status, location, and movement history.</p>";
+  updatePanel.classList.add("hidden");
 });
 
-renderHistory();
+renderActivity();

@@ -1,12 +1,10 @@
 :root {
   --bg: #07110d;
   --panel: #101b15;
-  --panel-light: #14231b;
   --line: rgba(244, 241, 232, 0.13);
   --text: #f4f1e8;
   --muted: #b7b0a0;
   --accent: #c9a646;
-  --accent-dark: #8d7022;
   --green: #163d2a;
   --green-light: #255b3e;
   --danger: #c75146;
@@ -14,9 +12,7 @@
   --shadow: 0 20px 60px rgba(0, 0, 0, 0.34);
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 body {
   margin: 0;
@@ -29,16 +25,8 @@ body {
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-}
-
-button {
-  border: 0;
-}
+button, input, select, textarea { font: inherit; }
+button { border: 0; }
 
 .app-shell {
   width: min(100%, 560px);
@@ -48,9 +36,7 @@ button {
   gap: 16px;
 }
 
-.hero-card,
-.panel,
-.quick-actions {
+.hero-card, .panel, .quick-actions {
   border: 1px solid var(--line);
   border-radius: 24px;
   background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018));
@@ -58,9 +44,7 @@ button {
   backdrop-filter: blur(10px);
 }
 
-.hero-card {
-  padding: 22px;
-}
+.hero-card { padding: 22px; }
 
 .brand-row {
   display: flex;
@@ -78,7 +62,6 @@ button {
   border: 1px solid rgba(201, 166, 70, 0.65);
   color: var(--accent);
   font-weight: 900;
-  letter-spacing: -0.04em;
 }
 
 .eyebrow {
@@ -90,11 +73,7 @@ button {
   font-weight: 800;
 }
 
-h1,
-h2,
-p {
-  margin-top: 0;
-}
+h1, h2, p { margin-top: 0; }
 
 h1 {
   margin-bottom: 0;
@@ -146,12 +125,9 @@ h2 {
   color: #171106;
 }
 
-.panel {
-  padding: 18px;
-}
+.panel { padding: 18px; }
 
-.panel-heading,
-.section-title {
+.panel-heading, .section-title {
   display: flex;
   justify-content: space-between;
   gap: 14px;
@@ -159,10 +135,7 @@ h2 {
   margin-bottom: 16px;
 }
 
-.form-stack {
-  display: grid;
-  gap: 14px;
-}
+.form-stack { display: grid; gap: 14px; }
 
 label {
   display: block;
@@ -171,9 +144,7 @@ label {
   font-size: 0.86rem;
 }
 
-input,
-select,
-textarea {
+input, select, textarea {
   width: 100%;
   border: 1px solid var(--line);
   background: rgba(0,0,0,0.24);
@@ -184,42 +155,25 @@ textarea {
   outline: none;
 }
 
-select {
-  appearance: none;
-}
-
 textarea {
   min-height: 82px;
   resize: vertical;
 }
 
-input:focus,
-select:focus,
-textarea:focus {
+input:focus, select:focus, textarea:focus {
   border-color: rgba(201, 166, 70, 0.7);
   box-shadow: 0 0 0 4px rgba(201, 166, 70, 0.1);
 }
 
-.two-column {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-}
+.two-column, .action-grid { display: grid; grid-template-columns: 1fr; gap: 14px; }
 
-.action-grid,
 .search-row {
   display: grid;
+  grid-template-columns: 1fr auto;
   gap: 10px;
 }
 
-.search-row {
-  grid-template-columns: 1fr auto;
-}
-
-.primary-button,
-.secondary-button,
-.ghost-button,
-.maps-button {
+.primary-button, .secondary-button, .ghost-button, .maps-button, .outline-button {
   min-height: 50px;
   border-radius: 16px;
   padding: 13px 16px;
@@ -231,10 +185,7 @@ textarea:focus {
   text-align: center;
 }
 
-.primary-button {
-  background: var(--accent);
-  color: #171106;
-}
+.primary-button { background: var(--accent); color: #171106; }
 
 .secondary-button {
   background: rgba(199, 81, 70, 0.16);
@@ -242,23 +193,15 @@ textarea:focus {
   border: 1px solid rgba(199, 81, 70, 0.35);
 }
 
-.ghost-button {
+.ghost-button, .outline-button {
   background: transparent;
   color: var(--muted);
   border: 1px solid var(--line);
-  min-height: 42px;
-  padding: 9px 13px;
 }
 
-.maps-button {
-  background: var(--green-light);
-  color: #eaf4ed;
-}
+.maps-button { background: var(--green-light); color: #eaf4ed; }
 
-button:active,
-.maps-button:active {
-  transform: scale(0.985);
-}
+button:active, .maps-button:active, .outline-button:active { transform: scale(0.985); }
 
 .small-note {
   color: var(--muted);
@@ -267,9 +210,7 @@ button:active,
   margin-bottom: 0;
 }
 
-.hidden {
-  display: none;
-}
+.hidden { display: none; }
 
 .vehicle-result {
   margin-top: 14px;
@@ -303,6 +244,7 @@ button:active,
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 950;
+  white-space: nowrap;
 }
 
 .status-in {
@@ -341,10 +283,24 @@ button:active,
   font-weight: 800;
 }
 
-.history-list {
+.result-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.history-toggle {
+  margin-top: 0;
+  width: 100%;
+}
+
+.vehicle-history {
+  margin-top: 12px;
   display: grid;
   gap: 10px;
 }
+
+.history-list { display: grid; gap: 10px; }
 
 .history-card {
   padding: 14px;
@@ -354,9 +310,7 @@ button:active,
   cursor: pointer;
 }
 
-.history-card:hover {
-  border-color: rgba(201, 166, 70, 0.38);
-}
+.history-card:hover { border-color: rgba(201, 166, 70, 0.38); }
 
 .history-top {
   display: flex;
@@ -365,10 +319,7 @@ button:active,
   margin-bottom: 7px;
 }
 
-.history-reg {
-  font-weight: 950;
-  letter-spacing: 0.04em;
-}
+.history-reg { font-weight: 950; letter-spacing: 0.04em; }
 
 .history-time {
   color: var(--muted);
@@ -399,14 +350,6 @@ button:active,
     padding: 28px;
   }
 
-  .hero-card,
-  .quick-actions {
-    grid-column: span 2;
-  }
-
-  .two-column,
-  .action-grid,
-  .detail-grid {
-    grid-template-columns: 1fr 1fr;
-  }
+  .hero-card, .quick-actions { grid-column: span 2; }
+  .two-column, .action-grid, .detail-grid, .result-actions { grid-template-columns: 1fr 1fr; }
 }
