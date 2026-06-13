@@ -1,53 +1,112 @@
 <!DOCTYPE html>
 <html lang="en-GB">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vehicle Location Log</title>
-    <link rel="stylesheet" href="css/style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vehicle Location Log</title>
+  <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-    <header class="app-header">
-        <h1>Vehicle Location Log</h1>
-        <p>Log and search vehicle locations across the dealership compound.</p>
-    </header>
+  <main class="app-shell">
+    <section class="hero-card">
+      <div class="brand-row">
+        <div class="logo-mark">VL</div>
+        <div>
+          <p class="eyebrow">Vehicle Location Log</p>
+          <h1>Last known vehicle location</h1>
+        </div>
+      </div>
 
-    <main class="app-container">
-        <section class="card">
-            <h2>Log Vehicle Location</h2>
+      <p class="hero-text">
+        Mobile-friendly demo for logging where a vehicle was last parked inside a dealership,
+        compound, or storage area.
+      </p>
 
-            <form id="vehicleForm">
-                <label for="registration">Registration</label>
-                <input type="text" id="registration" name="registration" placeholder="e.g. AB12 CDE" required>
+      <div class="demo-warning">
+        Demo only · No backend · Records saved locally on this device
+      </div>
+    </section>
 
-                <label for="location">Location</label>
-                <select id="location" name="location" required>
-                    <option value="">Select location</option>
-                    <option value="Customer Drop-Off">Customer Drop-Off</option>
-                    <option value="Workshop">Workshop</option>
-                    <option value="Valet Area">Valet Area</option>
-                    <option value="Car Park A">Car Park A</option>
-                    <option value="Car Park B">Car Park B</option>
-                    <option value="Ready for Collection">Ready for Collection</option>
-                </select>
+    <section class="quick-actions">
+      <button id="showSaveViewBtn" class="tab-button active">Save Location</button>
+      <button id="showSearchViewBtn" class="tab-button">Find Vehicle</button>
+    </section>
 
-                <label for="notes">Notes</label>
-                <textarea id="notes" name="notes" rows="3" placeholder="Optional notes..."></textarea>
+    <section id="saveView" class="panel">
+      <div class="panel-heading">
+        <p class="eyebrow">Parked vehicle</p>
+        <h2>Update last known location</h2>
+      </div>
 
-                <button type="submit">Save Vehicle</button>
-            </form>
-        </section>
+      <form id="saveLocationForm" class="form-stack">
+        <div>
+          <label for="regInput">Vehicle registration</label>
+          <input id="regInput" type="text" placeholder="e.g. AB12 CDE" autocomplete="off" />
+        </div>
 
-        <section class="card">
-            <h2>Search Vehicle</h2>
+        <div class="two-column">
+          <div>
+            <label for="staffInput">Updated by</label>
+            <input id="staffInput" type="text" placeholder="e.g. Martins" autocomplete="off" />
+          </div>
 
-            <label for="searchInput">Search by registration</label>
-            <input type="text" id="searchInput" placeholder="Type registration...">
+          <div>
+            <label for="vehicleTypeInput">Vehicle type</label>
+            <select id="vehicleTypeInput">
+              <option value="Customer vehicle">Customer vehicle</option>
+              <option value="Loan / courtesy car">Loan / courtesy car</option>
+              <option value="Stock vehicle">Stock vehicle</option>
+              <option value="Demo vehicle">Demo vehicle</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+        </div>
 
-            <div id="vehicleList" class="vehicle-list"></div>
-        </section>
-    </main>
+        <div>
+          <label for="noteInput">Optional note</label>
+          <textarea id="noteInput" placeholder="e.g. parked near wash bay, customer parking, back compound"></textarea>
+        </div>
 
-    <script src="js/app.js"></script>
+        <div class="action-grid">
+          <button type="submit" class="primary-button">Save Current Location</button>
+          <button id="markOutBtn" type="button" class="secondary-button">Mark Out</button>
+        </div>
+
+        <p class="small-note">
+          The app will ask for location permission when saving a location. GPS only needs to give a rough direction.
+        </p>
+      </form>
+    </section>
+
+    <section id="searchView" class="panel hidden">
+      <div class="panel-heading">
+        <p class="eyebrow">Search</p>
+        <h2>Find a vehicle</h2>
+      </div>
+
+      <form id="searchForm" class="search-row">
+        <input id="searchInput" type="text" placeholder="Enter registration" autocomplete="off" />
+        <button type="submit" class="primary-button">Search</button>
+      </form>
+
+      <div id="vehicleResult" class="vehicle-result empty">
+        <p>Search for a registration to see the latest saved location.</p>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <div>
+          <p class="eyebrow">Activity</p>
+          <h2>Recent movements</h2>
+        </div>
+        <button id="clearDemoBtn" class="ghost-button">Clear Demo</button>
+      </div>
+
+      <div id="historyList" class="history-list"></div>
+    </section>
+  </main>
+
+  <script src="js/app.js"></script>
 </body>
 </html>
