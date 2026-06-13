@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Location Log</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="app-header">
+        <h1>Vehicle Location Log</h1>
+        <p>Log and search vehicle locations across the dealership compound.</p>
+    </header>
+
+    <main class="app-container">
+        <section class="card">
+            <h2>Log Vehicle Location</h2>
+
+            <form id="vehicleForm">
+                <label for="registration">Registration</label>
+                <input type="text" id="registration" name="registration" placeholder="e.g. AB12 CDE" required>
+
+                <label for="location">Location</label>
+                <select id="location" name="location" required>
+                    <option value="">Select location</option>
+                    <option value="Customer Drop-Off">Customer Drop-Off</option>
+                    <option value="Workshop">Workshop</option>
+                    <option value="Valet Area">Valet Area</option>
+                    <option value="Car Park A">Car Park A</option>
+                    <option value="Car Park B">Car Park B</option>
+                    <option value="Ready for Collection">Ready for Collection</option>
+                </select>
+
+                <label for="notes">Notes</label>
+                <textarea id="notes" name="notes" rows="3" placeholder="Optional notes..."></textarea>
+
+                <button type="submit">Save Vehicle</button>
+            </form>
+        </section>
+
+        <section class="card">
+            <h2>Search Vehicle</h2>
+
+            <label for="searchInput">Search by registration</label>
+            <input type="text" id="searchInput" placeholder="Type registration...">
+
+            <div id="vehicleList" class="vehicle-list"></div>
+        </section>
+    </main>
+
+    <script src="js/app.js"></script>
+</body>
+</html>
