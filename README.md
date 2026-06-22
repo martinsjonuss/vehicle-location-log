@@ -158,6 +158,10 @@ Storage:
 
 * Supabase database
 
+Authentication:
+
+* Supabase Auth
+
 Hosting:
 
 * GitHub Pages
@@ -174,13 +178,13 @@ This is currently a proof of concept.
 
 The application does not currently include:
 
-* User accounts
 * Notifications
 * Vehicle assignment
 * Integration with dealership systems
 * Customer information
+* User profile display names
 
-Vehicle movement records are stored in Supabase and can be shared across browsers and devices.
+Vehicle movement records are stored in Supabase and can be shared across browsers and devices. Users must sign in before using the vehicle tracking workflow.
 
 ---
 
@@ -188,7 +192,7 @@ Vehicle movement records are stored in Supabase and can be shared across browser
 
 Potential future enhancements:
 
-* User authentication
+* User profile display names
 * Department assignment
 * Vehicle ownership tracking
 * Notifications between departments

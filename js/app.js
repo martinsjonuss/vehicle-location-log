@@ -1,3 +1,11 @@
+const loginScreen = document.getElementById("loginScreen");
+const appShell = document.getElementById("appShell");
+const loginForm = document.getElementById("loginForm");
+const loginEmail = document.getElementById("loginEmail");
+const loginPassword = document.getElementById("loginPassword");
+const loginMessage = document.getElementById("loginMessage");
+const signOutBtn = document.getElementById("signOutBtn");
+
 const checkInTab = document.getElementById("checkInTab");
 const findTab = document.getElementById("findTab");
 const checkInView = document.getElementById("checkInView");
@@ -7,7 +15,6 @@ const updatePanel = document.getElementById("updatePanel");
 const checkInForm = document.getElementById("checkInForm");
 const checkInReg = document.getElementById("checkInReg");
 const checkInMileage = document.getElementById("checkInMileage");
-const checkInStaff = document.getElementById("checkInStaff");
 const checkInType = document.getElementById("checkInType");
 const checkInParking = document.getElementById("checkInParking");
 const checkInNote = document.getElementById("checkInNote");
@@ -19,7 +26,6 @@ const vehicleResult = document.getElementById("vehicleResult");
 const updateForm = document.getElementById("updateForm");
 const updateTitle = document.getElementById("updateTitle");
 const updateReg = document.getElementById("updateReg");
-const updateStaff = document.getElementById("updateStaff");
 const updateStage = document.getElementById("updateStage");
 const updateParking = document.getElementById("updateParking");
 const updateNote = document.getElementById("updateNote");
@@ -56,6 +62,34 @@ function switchMainView(viewName) {
   checkInTab.classList.toggle("active", checkInActive);
   findTab.classList.toggle("active", !checkInActive);
   updatePanel.classList.add("hidden");
+}
+
+function showLogin() {
+  loginScreen.classList.remove("hidden");
+  appShell.classList.add("hidden");
+  updatePanel.classList.add("hidden");
+  loginPassword.value = "";
+}
+
+async function showApp() {
+  loginScreen.classList.add("hidden");
+  appShell.classList.remove("hidden");
+  loginMessage.textContent = "";
+  await renderActivity();
+}
+
+async function getCurrentStaffName() {
+  const {
+    data: { user },
+    error
+  } = await db.auth.getUser();
+
+  if (error) {
+    console.error(error);
+    return "Unknown User";
+  }
+
+  return user?.email || "Unknown User";
 }
 
 function actionFromRecord(record) {
@@ -165,6 +199,16 @@ function buildRecord({ reg, staff, vehicleType, stage, note, status, action, pos
 }
 
 async function addRecord(record) {
+  const {
+    data: { session }
+  } = await db.auth.getSession();
+
+  if (!session) {
+    showLogin();
+    alert("Please sign in before saving vehicle records.");
+    return;
+  }
+
   const { error } = await db
     .from("vehicle_movements")
     .insert(mapRecordForInsert(record));
@@ -303,7 +347,6 @@ async function openUpdatePanel(reg) {
   if (!latest) return;
 
   updateReg.value = latest.reg;
-  updateStaff.value = latest.staff === "Demo User" ? "" : latest.staff;
   updateParking.value = latest.parkingLocation || "";
   updateNote.value = "";
   updateStage.value = "Moved / Reparked";
@@ -339,10 +382,11 @@ async function toggleVehicleHistory(reg) {
 async function markVehicleOut(reg) {
   const latest = await getLatestRecord(reg);
   if (!latest || latest.status === "OUT") return;
+  const staffName = await getCurrentStaffName();
 
   const record = buildRecord({
     reg: latest.reg,
-    staff: latest.staff || "Demo User",
+    staff: staffName,
     vehicleType: latest.vehicleType,
     stage: "Out",
     note: "",
@@ -407,9 +451,10 @@ checkInForm.addEventListener("submit", event => {
 
   const button = checkInForm.querySelector("button[type='submit']");
   captureLocation(async position => {
+    const staffName = await getCurrentStaffName();
     const record = buildRecord({
       reg,
-      staff: checkInStaff.value,
+      staff: staffName,
       vehicleType: checkInType.value,
       stage: "Checked In",
       note: checkInNote.value,
@@ -448,9 +493,10 @@ updateForm.addEventListener("submit", async event => {
 
   const button = updateForm.querySelector("button[type='submit']");
   captureLocation(async position => {
+    const staffName = await getCurrentStaffName();
     const record = buildRecord({
       reg: latest.reg,
-      staff: updateStaff.value,
+      staff: staffName,
       vehicleType: latest.vehicleType,
       stage: updateStage.value,
       note: updateNote.value,
@@ -478,4 +524,61 @@ refreshBtn.addEventListener("click", async () => {
   updatePanel.classList.add("hidden");
 });
 
-renderActivity();
+loginForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  loginMessage.textContent = "";
+
+  const button = loginForm.querySelector("button[type='submit']");
+  button.disabled = true;
+  button.textContent = "Signing In...";
+
+  const { error } = await db.auth.signInWithPassword({
+    email: loginEmail.value.trim(),
+    password: loginPassword.value
+  });
+
+  button.disabled = false;
+  button.textContent = "Sign In";
+
+  if (error) {
+    loginMessage.textContent = error.message;
+  }
+});
+
+signOutBtn.addEventListener("click", async () => {
+  const { error } = await db.auth.signOut();
+
+  if (error) {
+    console.error(error);
+    alert("Sign out failed. Please try again.");
+  }
+});
+
+db.auth.onAuthStateChange(async (_event, session) => {
+  if (session) {
+    await showApp();
+  } else {
+    showLogin();
+  }
+});
+
+async function initialiseAuth() {
+  const {
+    data: { session },
+    error
+  } = await db.auth.getSession();
+
+  if (error) {
+    console.error(error);
+    showLogin();
+    return;
+  }
+
+  if (session) {
+    await showApp();
+  } else {
+    showLogin();
+  }
+}
+
+initialiseAuth();
