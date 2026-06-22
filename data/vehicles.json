@@ -1,16 +1,20 @@
 [
   {
-    "registration": "AB12 CDE",
+    "registration": "AB12CDE",
     "status": "IN",
     "stage": "Checked In",
     "vehicleType": "Customer vehicle",
-    "note": "Example placeholder only. Demo records are saved in browser localStorage."
+    "mileage": "42185",
+    "parkingLocation": "Parking 3",
+    "note": "Example placeholder only. App records are saved in browser localStorage."
   },
   {
-    "registration": "LR24 DEMO",
+    "registration": "LR24DEMO",
     "status": "IN",
     "stage": "Ready for Customer",
     "vehicleType": "Loan / courtesy car",
+    "mileage": "",
+    "parkingLocation": "Sales",
     "note": "Sample for future shared database development."
   }
 ]

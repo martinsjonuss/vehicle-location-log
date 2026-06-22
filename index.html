@@ -13,14 +13,13 @@
         <div class="logo-mark">VL</div>
         <div>
           <p class="eyebrow">Vehicle Location Log</p>
-          <h1>Find the last parked location</h1>
+          <h1>Track Vehicle Movements and Locations</h1>
         </div>
       </div>
       <p class="hero-text">
-        Mobile-friendly dealership demo for checking vehicles in, finding them later,
-        and updating their latest location after anyone moves them.
+        Track vehicle locations, movements, and status updates across the dealership and compound.
       </p>
-      <div class="demo-warning">Demo only · localStorage · no customer data</div>
+      <div class="demo-warning">Vehicle Tracking Prototype</div>
     </section>
 
     <section class="quick-actions">
@@ -38,6 +37,11 @@
         <div>
           <label for="checkInReg">Vehicle registration</label>
           <input id="checkInReg" type="text" placeholder="e.g. AB12 CDE" autocomplete="off" />
+        </div>
+
+        <div>
+          <label for="checkInMileage">Mileage</label>
+          <input id="checkInMileage" type="number" inputmode="numeric" placeholder="e.g. 42185" autocomplete="off" />
         </div>
 
         <div class="two-column">
@@ -59,12 +63,29 @@
         </div>
 
         <div>
+          <label for="checkInParking">Parking location</label>
+          <select id="checkInParking">
+            <option value="">Select parking location (optional)</option>
+            <option>Sales</option>
+            <option>Budget</option>
+            <option>Parking 1</option>
+            <option>Parking 2</option>
+            <option>Parking 3</option>
+            <option>Parking 4</option>
+            <option>Parking 5</option>
+            <option>Parking 6</option>
+            <option>Parking 7</option>
+            <option>Other</option>
+          </select>
+        </div>
+
+        <div>
           <label for="checkInNote">Optional note</label>
           <textarea id="checkInNote" placeholder="e.g. customer parking, back compound, near wash bay"></textarea>
         </div>
 
         <button type="submit" class="primary-button">Check In & Save Location</button>
-        <p class="small-note">GPS is captured from the phone/browser. It only needs to point staff in the right direction.</p>
+        
       </form>
     </section>
 
@@ -116,6 +137,23 @@
         </div>
 
         <div>
+          <label for="updateParking">Parking location</label>
+          <select id="updateParking">
+            <option value="">Select parking location (optional)</option>
+            <option>Sales</option>
+            <option>Budget</option>
+            <option>Parking 1</option>
+            <option>Parking 2</option>
+            <option>Parking 3</option>
+            <option>Parking 4</option>
+            <option>Parking 5</option>
+            <option>Parking 6</option>
+            <option>Parking 7</option>
+            <option>Other</option>
+          </select>
+        </div>
+
+        <div>
           <label for="updateNote">Optional note</label>
           <textarea id="updateNote" placeholder="e.g. parked beside workshop door, ready for customer collection"></textarea>
         </div>
@@ -130,7 +168,7 @@
     <section class="panel">
       <div class="section-title">
         <div>
-          <p class="eyebrow">Activity</p>
+          <p class="eyebrow">Vehicle Activity</p>
           <h2>Recent activity</h2>
         </div>
         <button id="clearDemoBtn" class="ghost-button">Clear Demo</button>

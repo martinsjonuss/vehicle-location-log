@@ -353,3 +353,41 @@ button:active, .maps-button:active, .outline-button:active { transform: scale(0.
   .hero-card, .quick-actions { grid-column: span 2; }
   .two-column, .action-grid, .detail-grid, .result-actions { grid-template-columns: 1fr 1fr; }
 }
+
+/* v3 additions */
+button.detail-card {
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+}
+
+button.detail-card .detail-value,
+button.detail-card .detail-label {
+  text-align: left;
+}
+
+.status-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.activity-status {
+  font-size: 0.72rem;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.activity-status.status-in {
+  color: #dff7e5;
+  background: rgba(105, 194, 125, 0.15);
+  border: 1px solid rgba(105, 194, 125, 0.3);
+}
+
+.activity-status.status-out {
+  color: #ffd8d4;
+  background: rgba(199, 81, 70, 0.15);
+  border: 1px solid rgba(199, 81, 70, 0.3);
+}
