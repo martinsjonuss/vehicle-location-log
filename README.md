@@ -172,6 +172,7 @@ Storage:
 Authentication:
 
 * Supabase Auth
+
 * Users managed manually in the Supabase dashboard
 
 Hosting:

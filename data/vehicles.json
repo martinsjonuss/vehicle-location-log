@@ -6,7 +6,7 @@
     "vehicleType": "Customer vehicle",
     "mileage": "42185",
     "parkingLocation": "Parking 3",
-    "note": "Example placeholder only. App records are saved in browser localStorage."
+    "note": "Example placeholder only. App records are saved in Supabase."
   },
   {
     "registration": "LR24DEMO",

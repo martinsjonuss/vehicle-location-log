@@ -28,15 +28,24 @@ body {
 button, input, select, textarea { font: inherit; }
 button { border: 0; }
 
-.app-shell {
+.auth-shell, .app-shell {
   width: min(100%, 560px);
   margin: 0 auto;
   padding: 18px;
+}
+
+.auth-shell {
+  min-height: 100vh;
+  display: grid;
+  align-items: center;
+}
+
+.app-shell {
   display: grid;
   gap: 16px;
 }
 
-.hero-card, .panel, .quick-actions {
+.auth-panel, .hero-card, .panel, .quick-actions {
   border: 1px solid var(--line);
   border-radius: 24px;
   background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018));
@@ -44,7 +53,18 @@ button { border: 0; }
   backdrop-filter: blur(10px);
 }
 
-.hero-card { padding: 22px; }
+.auth-panel, .hero-card { padding: 22px; }
+
+.auth-panel h1 { font-size: clamp(2rem, 8vw, 2.7rem); }
+
+.auth-panel form { margin-top: 20px; }
+
+.auth-message {
+  color: #ffd8d4;
+  line-height: 1.4;
+  margin: 0;
+  min-height: 1.4em;
+}
 
 .brand-row {
   display: flex;
@@ -102,6 +122,14 @@ h2 {
   color: #e3cd83;
   border: 1px solid rgba(201, 166, 70, 0.25);
   font-size: 0.78rem;
+}
+
+.hero-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+  flex-wrap: wrap;
 }
 
 .quick-actions {
@@ -344,12 +372,13 @@ button:active, .maps-button:active, .outline-button:active { transform: scale(0.
 }
 
 @media (min-width: 720px) {
-  .app-shell {
+  .auth-shell, .app-shell {
     width: min(100%, 960px);
-    grid-template-columns: 1fr 1fr;
     padding: 28px;
   }
 
+  .app-shell { grid-template-columns: 1fr 1fr; }
+  .auth-panel { width: min(100%, 520px); margin: 0 auto; }
   .hero-card, .quick-actions { grid-column: span 2; }
   .two-column, .action-grid, .detail-grid, .result-actions { grid-template-columns: 1fr 1fr; }
 }

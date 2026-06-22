@@ -1,4 +1,10 @@
-const STORAGE_KEY = "vehicleLocationLogRecordsV3";
+const loginScreen = document.getElementById("loginScreen");
+const appShell = document.getElementById("appShell");
+const loginForm = document.getElementById("loginForm");
+const loginEmail = document.getElementById("loginEmail");
+const loginPassword = document.getElementById("loginPassword");
+const loginMessage = document.getElementById("loginMessage");
+const signOutBtn = document.getElementById("signOutBtn");
 
 const checkInTab = document.getElementById("checkInTab");
 const findTab = document.getElementById("findTab");
@@ -9,7 +15,6 @@ const updatePanel = document.getElementById("updatePanel");
 const checkInForm = document.getElementById("checkInForm");
 const checkInReg = document.getElementById("checkInReg");
 const checkInMileage = document.getElementById("checkInMileage");
-const checkInStaff = document.getElementById("checkInStaff");
 const checkInType = document.getElementById("checkInType");
 const checkInParking = document.getElementById("checkInParking");
 const checkInNote = document.getElementById("checkInNote");
@@ -21,22 +26,13 @@ const vehicleResult = document.getElementById("vehicleResult");
 const updateForm = document.getElementById("updateForm");
 const updateTitle = document.getElementById("updateTitle");
 const updateReg = document.getElementById("updateReg");
-const updateStaff = document.getElementById("updateStaff");
 const updateStage = document.getElementById("updateStage");
 const updateParking = document.getElementById("updateParking");
 const updateNote = document.getElementById("updateNote");
 const cancelUpdateBtn = document.getElementById("cancelUpdateBtn");
 
 const activityList = document.getElementById("activityList");
-const clearDemoBtn = document.getElementById("clearDemoBtn");
-
-function getRecords() {
-  return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-}
-
-function saveRecords(records) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
-}
+const refreshBtn = document.getElementById("refreshBtn");
 
 function normaliseReg(value) {
   return value.trim().toUpperCase().replace(/\s+/g, "");
@@ -68,14 +64,115 @@ function switchMainView(viewName) {
   updatePanel.classList.add("hidden");
 }
 
-function getLatestRecord(reg) {
-  const cleaned = normaliseReg(reg);
-  return getRecords().slice().reverse().find(r => r.reg === cleaned);
+function showLogin() {
+  loginScreen.classList.remove("hidden");
+  appShell.classList.add("hidden");
+  updatePanel.classList.add("hidden");
+  loginPassword.value = "";
 }
 
-function getVehicleHistory(reg) {
+async function showApp() {
+  loginScreen.classList.add("hidden");
+  appShell.classList.remove("hidden");
+  loginMessage.textContent = "";
+  await renderActivity();
+}
+
+async function getCurrentStaffName() {
+  const {
+    data: { user },
+    error
+  } = await db.auth.getUser();
+
+  if (error) {
+    console.error(error);
+    return "Unknown User";
+  }
+
+  return user?.email || "Unknown User";
+}
+
+function actionFromRecord(record) {
+  if (record.status === "OUT") return "Marked out";
+  if (record.stage === "Checked In") return "Checked in";
+  return "Location updated";
+}
+
+function mapDbRecord(row) {
+  return {
+    id: row.id,
+    reg: row.registration,
+    staff: row.staff_name || "Demo User",
+    vehicleType: row.vehicle_type || "Customer vehicle",
+    stage: row.stage,
+    note: row.note || "",
+    status: row.status,
+    action: actionFromRecord(row),
+    mileage: row.mileage || "",
+    parkingLocation: row.parking_location || "",
+    lat: row.latitude,
+    lng: row.longitude,
+    accuracy: row.accuracy,
+    createdAt: row.created_at
+  };
+}
+
+function mapRecordForInsert(record) {
+  return {
+    registration: record.reg,
+    status: record.status,
+    stage: record.stage,
+    vehicle_type: record.vehicleType,
+    mileage: record.mileage ? Number(record.mileage) : null,
+    parking_location: record.parkingLocation || null,
+    staff_name: record.staff,
+    note: record.note || null,
+    latitude: record.lat,
+    longitude: record.lng,
+    accuracy: record.accuracy
+  };
+}
+
+function handleDbError(error, fallback) {
+  console.error(error);
+  alert("Vehicle records could not be loaded. Please try again.");
+  return fallback;
+}
+
+async function getRecords() {
+  const { data, error } = await db
+    .from("vehicle_movements")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) return handleDbError(error, []);
+  return (data || []).map(mapDbRecord);
+}
+
+async function getLatestRecord(reg) {
   const cleaned = normaliseReg(reg);
-  return getRecords().filter(r => r.reg === cleaned).slice().reverse();
+  const { data, error } = await db
+    .from("vehicle_movements")
+    .select("*")
+    .eq("registration", cleaned)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) return handleDbError(error, null);
+  return data ? mapDbRecord(data) : null;
+}
+
+async function getVehicleHistory(reg) {
+  const cleaned = normaliseReg(reg);
+  const { data, error } = await db
+    .from("vehicle_movements")
+    .select("*")
+    .eq("registration", cleaned)
+    .order("created_at", { ascending: false });
+
+  if (error) return handleDbError(error, []);
+  return (data || []).map(mapDbRecord);
 }
 
 function mapsUrl(record) {
@@ -101,12 +198,29 @@ function buildRecord({ reg, staff, vehicleType, stage, note, status, action, pos
   };
 }
 
-function addRecord(record) {
-  const records = getRecords();
-  records.push(record);
-  saveRecords(records);
-  renderActivity();
-  renderVehicleResult(getLatestRecord(record.reg));
+async function addRecord(record) {
+  const {
+    data: { session }
+  } = await db.auth.getSession();
+
+  if (!session) {
+    showLogin();
+    alert("Please sign in before saving vehicle records.");
+    return;
+  }
+
+  const { error } = await db
+    .from("vehicle_movements")
+    .insert(mapRecordForInsert(record));
+
+  if (error) {
+    console.error(error);
+    alert("Vehicle record could not be saved. Please try again.");
+    return;
+  }
+
+  await renderActivity();
+  await renderVehicleResult(record.reg);
 }
 
 function captureLocation(successCallback, button) {
@@ -149,14 +263,16 @@ function movementLine(record) {
   ].filter(Boolean).join(" · ");
 }
 
-function renderVehicleResult(record) {
+async function renderVehicleResult(recordOrReg) {
+  const record = typeof recordOrReg === "string" ? await getLatestRecord(recordOrReg) : recordOrReg;
+
   if (!record) {
     vehicleResult.className = "vehicle-result empty";
     vehicleResult.innerHTML = "<p>No saved record found for that registration.</p>";
     return;
   }
 
-  const history = getVehicleHistory(record.reg);
+  const history = await getVehicleHistory(record.reg);
   const hasLocation = record.lat !== null && record.lng !== null;
   const statusClass = record.status === "IN" ? "status-in" : "status-out";
 
@@ -226,12 +342,11 @@ function renderVehicleResult(record) {
   switchMainView("find");
 }
 
-function openUpdatePanel(reg) {
-  const latest = getLatestRecord(reg);
+async function openUpdatePanel(reg) {
+  const latest = await getLatestRecord(reg);
   if (!latest) return;
 
   updateReg.value = latest.reg;
-  updateStaff.value = latest.staff === "Demo User" ? "" : latest.staff;
   updateParking.value = latest.parkingLocation || "";
   updateNote.value = "";
   updateStage.value = "Moved / Reparked";
@@ -240,9 +355,8 @@ function openUpdatePanel(reg) {
   updatePanel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
-function toggleVehicleHistory(reg) {
+async function toggleVehicleHistory(reg) {
   const panel = document.getElementById("vehicleHistoryPanel");
-  const history = getVehicleHistory(reg);
 
   if (!panel) return;
 
@@ -252,6 +366,7 @@ function toggleVehicleHistory(reg) {
     return;
   }
 
+  const history = await getVehicleHistory(reg);
   panel.classList.remove("hidden");
   panel.innerHTML = history.map(record => `
     <article class="history-card">
@@ -264,13 +379,14 @@ function toggleVehicleHistory(reg) {
   `).join("");
 }
 
-function markVehicleOut(reg) {
-  const latest = getLatestRecord(reg);
+async function markVehicleOut(reg) {
+  const latest = await getLatestRecord(reg);
   if (!latest || latest.status === "OUT") return;
+  const staffName = await getCurrentStaffName();
 
   const record = buildRecord({
     reg: latest.reg,
-    staff: latest.staff || "Demo User",
+    staff: staffName,
     vehicleType: latest.vehicleType,
     stage: "Out",
     note: "",
@@ -281,11 +397,17 @@ function markVehicleOut(reg) {
     position: null
   });
 
-  addRecord(record);
+  await addRecord(record);
 }
 
-function renderActivity() {
-  const records = getRecords().slice().reverse().slice(0, 10);
+async function renderActivity() {
+  const { data, error } = await db
+    .from("vehicle_movements")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(10);
+
+  const records = error ? handleDbError(error, []) : (data || []).map(mapDbRecord);
 
   if (records.length === 0) {
     activityList.innerHTML = `<div class="empty-state">No vehicle updates saved yet.</div>`;
@@ -311,7 +433,7 @@ function renderActivity() {
   }).join("");
 
   document.querySelectorAll("#activityList .history-card").forEach(card => {
-    card.addEventListener("click", () => renderVehicleResult(getLatestRecord(card.dataset.reg)));
+    card.addEventListener("click", () => renderVehicleResult(card.dataset.reg));
   });
 }
 
@@ -328,10 +450,11 @@ checkInForm.addEventListener("submit", event => {
   }
 
   const button = checkInForm.querySelector("button[type='submit']");
-  captureLocation(position => {
+  captureLocation(async position => {
+    const staffName = await getCurrentStaffName();
     const record = buildRecord({
       reg,
-      staff: checkInStaff.value,
+      staff: staffName,
       vehicleType: checkInType.value,
       stage: "Checked In",
       note: checkInNote.value,
@@ -342,7 +465,7 @@ checkInForm.addEventListener("submit", event => {
       position
     });
 
-    addRecord(record);
+    await addRecord(record);
     checkInReg.value = "";
     checkInMileage.value = "";
     checkInParking.value = "";
@@ -350,7 +473,7 @@ checkInForm.addEventListener("submit", event => {
   }, button);
 });
 
-searchForm.addEventListener("submit", event => {
+searchForm.addEventListener("submit", async event => {
   event.preventDefault();
 
   const reg = normaliseReg(searchReg.value);
@@ -359,20 +482,21 @@ searchForm.addEventListener("submit", event => {
     return;
   }
 
-  renderVehicleResult(getLatestRecord(reg));
+  await renderVehicleResult(reg);
 });
 
-updateForm.addEventListener("submit", event => {
+updateForm.addEventListener("submit", async event => {
   event.preventDefault();
 
-  const latest = getLatestRecord(updateReg.value);
+  const latest = await getLatestRecord(updateReg.value);
   if (!latest) return;
 
   const button = updateForm.querySelector("button[type='submit']");
-  captureLocation(position => {
+  captureLocation(async position => {
+    const staffName = await getCurrentStaffName();
     const record = buildRecord({
       reg: latest.reg,
-      staff: updateStaff.value,
+      staff: staffName,
       vehicleType: latest.vehicleType,
       stage: updateStage.value,
       note: updateNote.value,
@@ -383,7 +507,7 @@ updateForm.addEventListener("submit", event => {
       position
     });
 
-    addRecord(record);
+    await addRecord(record);
     updatePanel.classList.add("hidden");
     updateNote.value = "";
   }, button);
@@ -393,14 +517,69 @@ cancelUpdateBtn.addEventListener("click", () => {
   updatePanel.classList.add("hidden");
 });
 
-clearDemoBtn.addEventListener("click", () => {
-  if (!confirm("Clear all records from this device?")) return;
-
-  localStorage.removeItem(STORAGE_KEY);
-  renderActivity();
+refreshBtn.addEventListener("click", async () => {
+  await renderActivity();
   vehicleResult.className = "vehicle-result empty";
   vehicleResult.innerHTML = "<p>Search for a registration to view the latest status, location, and movement history.</p>";
   updatePanel.classList.add("hidden");
 });
 
-renderActivity();
+loginForm.addEventListener("submit", async event => {
+  event.preventDefault();
+  loginMessage.textContent = "";
+
+  const button = loginForm.querySelector("button[type='submit']");
+  button.disabled = true;
+  button.textContent = "Signing In...";
+
+  const { error } = await db.auth.signInWithPassword({
+    email: loginEmail.value.trim(),
+    password: loginPassword.value
+  });
+
+  button.disabled = false;
+  button.textContent = "Sign In";
+
+  if (error) {
+    console.error(error);
+    loginMessage.textContent = "Sign in failed. Check your email and password.";
+  }
+});
+
+signOutBtn.addEventListener("click", async () => {
+  const { error } = await db.auth.signOut();
+
+  if (error) {
+    console.error(error);
+    alert("Sign out failed. Please try again.");
+  }
+});
+
+db.auth.onAuthStateChange(async (_event, session) => {
+  if (session) {
+    await showApp();
+  } else {
+    showLogin();
+  }
+});
+
+async function initialiseAuth() {
+  const {
+    data: { session },
+    error
+  } = await db.auth.getSession();
+
+  if (error) {
+    console.error(error);
+    showLogin();
+    return;
+  }
+
+  if (session) {
+    await showApp();
+  } else {
+    showLogin();
+  }
+}
+
+initialiseAuth();

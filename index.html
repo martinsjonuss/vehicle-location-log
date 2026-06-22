@@ -7,7 +7,34 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <main class="app-shell">
+  <section id="loginScreen" class="auth-shell">
+    <div class="auth-panel">
+      <div class="brand-row">
+        <div class="logo-mark">VL</div>
+        <div>
+          <p class="eyebrow">Vehicle Location Log</p>
+          <h1>Sign in</h1>
+        </div>
+      </div>
+
+      <form id="loginForm" class="form-stack">
+        <div>
+          <label for="loginEmail">Email</label>
+          <input id="loginEmail" type="email" autocomplete="email" required />
+        </div>
+
+        <div>
+          <label for="loginPassword">Password</label>
+          <input id="loginPassword" type="password" autocomplete="current-password" required />
+        </div>
+
+        <button type="submit" class="primary-button">Sign In</button>
+        <p id="loginMessage" class="auth-message" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+
+  <main id="appShell" class="app-shell hidden">
     <section class="hero-card">
       <div class="brand-row">
         <div class="logo-mark">VL</div>
@@ -19,7 +46,10 @@
       <p class="hero-text">
         Track vehicle locations, movements, and status updates across the dealership and compound.
       </p>
-      <div class="demo-warning">Vehicle Tracking Prototype</div>
+      <div class="hero-actions">
+        <div class="demo-warning">Vehicle Tracking Prototype</div>
+        <button id="signOutBtn" class="ghost-button">Sign Out</button>
+      </div>
     </section>
 
     <section class="quick-actions">
@@ -44,22 +74,15 @@
           <input id="checkInMileage" type="number" inputmode="numeric" placeholder="e.g. 42185" autocomplete="off" />
         </div>
 
-        <div class="two-column">
-          <div>
-            <label for="checkInStaff">Updated by</label>
-            <input id="checkInStaff" type="text" placeholder="e.g. Martins" autocomplete="off" />
-          </div>
-
-          <div>
-            <label for="checkInType">Vehicle type</label>
-            <select id="checkInType">
-              <option>Customer vehicle</option>
-              <option>Loan / courtesy car</option>
-              <option>Stock vehicle</option>
-              <option>Demo vehicle</option>
-              <option>Other</option>
-            </select>
-          </div>
+        <div>
+          <label for="checkInType">Vehicle type</label>
+          <select id="checkInType">
+            <option>Customer vehicle</option>
+            <option>Loan / courtesy car</option>
+            <option>Stock vehicle</option>
+            <option>Demo vehicle</option>
+            <option>Other</option>
+          </select>
         </div>
 
         <div>
@@ -114,26 +137,19 @@
       <form id="updateForm" class="form-stack">
         <input id="updateReg" type="hidden" />
 
-        <div class="two-column">
-          <div>
-            <label for="updateStaff">Updated by</label>
-            <input id="updateStaff" type="text" placeholder="e.g. Mechanic, Valet, Martins" autocomplete="off" />
-          </div>
-
-          <div>
-            <label for="updateStage">Current stage</label>
-            <select id="updateStage">
-              <option>Parked</option>
-              <option>In Workshop</option>
-              <option>Servicing / Repair</option>
-              <option>Waiting for Valet</option>
-              <option>Valet / Wash</option>
-              <option>Ready for Customer</option>
-              <option>Moved / Reparked</option>
-              <option>Blocked In / Moved to Clear Access</option>
-              <option>Other</option>
-            </select>
-          </div>
+        <div>
+          <label for="updateStage">Current stage</label>
+          <select id="updateStage">
+            <option>Parked</option>
+            <option>In Workshop</option>
+            <option>Servicing / Repair</option>
+            <option>Waiting for Valet</option>
+            <option>Valet / Wash</option>
+            <option>Ready for Customer</option>
+            <option>Moved / Reparked</option>
+            <option>Blocked In / Moved to Clear Access</option>
+            <option>Other</option>
+          </select>
         </div>
 
         <div>
@@ -171,13 +187,15 @@
           <p class="eyebrow">Vehicle Activity</p>
           <h2>Recent activity</h2>
         </div>
-        <button id="clearDemoBtn" class="ghost-button">Clear Demo</button>
+        <button id="refreshBtn" class="ghost-button">Refresh</button>
       </div>
 
       <div id="activityList" class="history-list"></div>
     </section>
   </main>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="js/supabase-config.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>
