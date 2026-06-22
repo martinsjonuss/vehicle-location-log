@@ -6,18 +6,3 @@ const db = supabase.createClient(
   SUPABASE_URL,
   SUPABASE_ANON_KEY
 );
-
-console.log("Supabase connected");
-console.log(db);
-
-async function testConnection() {
-    const { data, error } = await db
-        .from('vehicle_movements')
-        .select('*')
-        .limit(1);
-
-    console.log('DATA:', data);
-    console.log('ERROR:', error);
-}
-
-testConnection();
