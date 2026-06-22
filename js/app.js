@@ -1,4 +1,4 @@
-const STORAGE_KEY = "vehicleLocationLogRecordsV2";
+const STORAGE_KEY = "vehicleLocationLogRecordsV3";
 
 const checkInTab = document.getElementById("checkInTab");
 const findTab = document.getElementById("findTab");
@@ -8,8 +8,10 @@ const updatePanel = document.getElementById("updatePanel");
 
 const checkInForm = document.getElementById("checkInForm");
 const checkInReg = document.getElementById("checkInReg");
+const checkInMileage = document.getElementById("checkInMileage");
 const checkInStaff = document.getElementById("checkInStaff");
 const checkInType = document.getElementById("checkInType");
+const checkInParking = document.getElementById("checkInParking");
 const checkInNote = document.getElementById("checkInNote");
 
 const searchForm = document.getElementById("searchForm");
@@ -21,6 +23,7 @@ const updateTitle = document.getElementById("updateTitle");
 const updateReg = document.getElementById("updateReg");
 const updateStaff = document.getElementById("updateStaff");
 const updateStage = document.getElementById("updateStage");
+const updateParking = document.getElementById("updateParking");
 const updateNote = document.getElementById("updateNote");
 const cancelUpdateBtn = document.getElementById("cancelUpdateBtn");
 
@@ -36,7 +39,14 @@ function saveRecords(records) {
 }
 
 function normaliseReg(value) {
-  return value.trim().toUpperCase().replace(/\s+/g, " ");
+  return value.trim().toUpperCase().replace(/\s+/g, "");
+}
+
+function formatMileage(value) {
+  if (!value) return "Not recorded";
+  const numeric = Number(value);
+  if (Number.isNaN(numeric)) return value;
+  return numeric.toLocaleString("en-GB");
 }
 
 function formatTime(isoString) {
@@ -55,6 +65,7 @@ function switchMainView(viewName) {
   findView.classList.toggle("hidden", checkInActive);
   checkInTab.classList.toggle("active", checkInActive);
   findTab.classList.toggle("active", !checkInActive);
+  updatePanel.classList.add("hidden");
 }
 
 function getLatestRecord(reg) {
@@ -71,7 +82,7 @@ function mapsUrl(record) {
   return `https://www.google.com/maps?q=${record.lat},${record.lng}`;
 }
 
-function buildRecord({ reg, staff, vehicleType, stage, note, status, action, position }) {
+function buildRecord({ reg, staff, vehicleType, stage, note, status, action, position, mileage, parkingLocation }) {
   return {
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
     reg: normaliseReg(reg),
@@ -81,6 +92,8 @@ function buildRecord({ reg, staff, vehicleType, stage, note, status, action, pos
     note: note.trim(),
     status,
     action,
+    mileage: mileage || "",
+    parkingLocation: parkingLocation || "",
     lat: position ? position.coords.latitude : null,
     lng: position ? position.coords.longitude : null,
     accuracy: position ? position.coords.accuracy : null,
@@ -125,6 +138,17 @@ function captureLocation(successCallback, button) {
   );
 }
 
+function movementLine(record) {
+  return [
+    `${record.action} by ${record.staff}`,
+    record.status ? `Status: ${record.status}` : "",
+    record.parkingLocation ? `Parking: ${record.parkingLocation}` : "",
+    record.mileage ? `Mileage: ${formatMileage(record.mileage)}` : "",
+    record.accuracy ? `GPS approx. ${Math.round(record.accuracy)}m` : "",
+    record.note ? record.note : ""
+  ].filter(Boolean).join(" · ");
+}
+
 function renderVehicleResult(record) {
   if (!record) {
     vehicleResult.className = "vehicle-result empty";
@@ -160,6 +184,14 @@ function renderVehicleResult(record) {
         <p class="detail-value">${record.staff}</p>
       </div>
       <div class="detail-card">
+        <div class="detail-label">Mileage</div>
+        <p class="detail-value">${formatMileage(record.mileage)}</p>
+      </div>
+      <div class="detail-card">
+        <div class="detail-label">Parking location</div>
+        <p class="detail-value">${record.parkingLocation || "Not selected"}</p>
+      </div>
+      <div class="detail-card">
         <div class="detail-label">GPS accuracy</div>
         <p class="detail-value">${hasLocation ? `Approx. ${Math.round(record.accuracy)}m` : "No location saved"}</p>
       </div>
@@ -186,17 +218,9 @@ function renderVehicleResult(record) {
   const markOutButton = vehicleResult.querySelector("[data-action='mark-out']");
   const historyButton = vehicleResult.querySelector("[data-action='toggle-history']");
 
-  if (updateButton) {
-    updateButton.addEventListener("click", () => openUpdatePanel(record.reg));
-  }
-
-  if (markOutButton) {
-    markOutButton.addEventListener("click", () => markVehicleOut(record.reg));
-  }
-
-  if (historyButton) {
-    historyButton.addEventListener("click", () => toggleVehicleHistory(record.reg));
-  }
+  if (updateButton) updateButton.addEventListener("click", () => openUpdatePanel(record.reg));
+  if (markOutButton) markOutButton.addEventListener("click", () => markVehicleOut(record.reg));
+  if (historyButton) historyButton.addEventListener("click", () => toggleVehicleHistory(record.reg));
 
   searchReg.value = record.reg;
   switchMainView("find");
@@ -208,6 +232,7 @@ function openUpdatePanel(reg) {
 
   updateReg.value = latest.reg;
   updateStaff.value = latest.staff === "Demo User" ? "" : latest.staff;
+  updateParking.value = latest.parkingLocation || "";
   updateNote.value = "";
   updateStage.value = "Moved / Reparked";
   updateTitle.textContent = `Update ${latest.reg}`;
@@ -234,11 +259,7 @@ function toggleVehicleHistory(reg) {
         <span class="history-reg">${record.stage}</span>
         <span class="history-time">${formatTime(record.createdAt)}</span>
       </div>
-      <p class="history-note">
-        ${record.action} by ${record.staff}
-        ${record.accuracy ? ` · GPS approx. ${Math.round(record.accuracy)}m` : ""}
-        ${record.note ? ` · ${record.note}` : ""}
-      </p>
+      <p class="history-note">${movementLine(record)}</p>
     </article>
   `).join("");
 }
@@ -255,6 +276,8 @@ function markVehicleOut(reg) {
     note: "",
     status: "OUT",
     action: "Marked out",
+    mileage: latest.mileage || "",
+    parkingLocation: latest.parkingLocation || "",
     position: null
   });
 
@@ -262,25 +285,30 @@ function markVehicleOut(reg) {
 }
 
 function renderActivity() {
-  const records = getRecords().slice().reverse();
+  const records = getRecords().slice().reverse().slice(0, 10);
 
   if (records.length === 0) {
-    activityList.innerHTML = `<div class="empty-state">No demo activity saved yet.</div>`;
+    activityList.innerHTML = `<div class="empty-state">No vehicle updates saved yet.</div>`;
     return;
   }
 
-  activityList.innerHTML = records.map(record => `
-    <article class="history-card" data-reg="${record.reg}">
-      <div class="history-top">
-        <span class="history-reg">${record.reg}</span>
-        <span class="history-time">${formatTime(record.createdAt)}</span>
-      </div>
-      <p class="history-note">
-        ${record.action} · ${record.stage} · ${record.staff}
-        ${record.note ? ` · ${record.note}` : ""}
-      </p>
-    </article>
-  `).join("");
+  activityList.innerHTML = records.map(record => {
+    const statusClass = record.status === "IN" ? "status-in" : "status-out";
+    return `
+      <article class="history-card" data-reg="${record.reg}">
+        <div class="history-top">
+          <div>
+            <span class="history-reg">${record.reg}</span>
+            <div class="status-line">
+              <span class="activity-status ${statusClass}">${record.status}</span>
+            </div>
+          </div>
+          <span class="history-time">${formatTime(record.createdAt)}</span>
+        </div>
+        <p class="history-note">${movementLine(record)}</p>
+      </article>
+    `;
+  }).join("");
 
   document.querySelectorAll("#activityList .history-card").forEach(card => {
     card.addEventListener("click", () => renderVehicleResult(getLatestRecord(card.dataset.reg)));
@@ -309,11 +337,15 @@ checkInForm.addEventListener("submit", event => {
       note: checkInNote.value,
       status: "IN",
       action: "Checked in",
+      mileage: checkInMileage.value,
+      parkingLocation: checkInParking.value,
       position
     });
 
     addRecord(record);
     checkInReg.value = "";
+    checkInMileage.value = "";
+    checkInParking.value = "";
     checkInNote.value = "";
   }, button);
 });
@@ -346,6 +378,8 @@ updateForm.addEventListener("submit", event => {
       note: updateNote.value,
       status: "IN",
       action: "Location updated",
+      mileage: latest.mileage || "",
+      parkingLocation: updateParking.value,
       position
     });
 
@@ -360,7 +394,7 @@ cancelUpdateBtn.addEventListener("click", () => {
 });
 
 clearDemoBtn.addEventListener("click", () => {
-  if (!confirm("Clear all demo records from this device?")) return;
+  if (!confirm("Clear all records from this device?")) return;
 
   localStorage.removeItem(STORAGE_KEY);
   renderActivity();
