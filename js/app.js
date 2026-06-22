@@ -541,7 +541,8 @@ loginForm.addEventListener("submit", async event => {
   button.textContent = "Sign In";
 
   if (error) {
-    loginMessage.textContent = error.message;
+    console.error(error);
+    loginMessage.textContent = "Sign in failed. Check your email and password.";
   }
 });
 
