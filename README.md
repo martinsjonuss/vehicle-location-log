@@ -20,6 +20,7 @@ While parking locations may initially be recorded, the information often becomes
 
 This application provides a simple way to:
 
+* Require staff sign-in before records can be viewed or created
 * Record a vehicle's location when parked
 * Update the location when moved
 * View the latest known location
@@ -61,6 +62,15 @@ Marked OUT
 
 ## Features
 
+### Authentication
+
+* Supabase Auth sign-in
+* Existing Supabase users only
+* No public sign-up flow
+* Main app hidden until a valid session exists
+* Sign out returns the user to the login screen
+* Signed-in user email saved as `staff_name`
+
 ### Vehicle Check In
 
 * Vehicle registration capture
@@ -88,6 +98,7 @@ Marked OUT
 * Update parking location
 * Add movement notes
 * Record movement history
+* Mark vehicle OUT by creating a new movement record
 
 ### Movement History
 
@@ -156,7 +167,12 @@ Frontend:
 
 Storage:
 
-* Browser localStorage
+* Supabase database
+
+Authentication:
+
+* Supabase Auth
+* Users managed manually in the Supabase dashboard
 
 Hosting:
 
@@ -168,21 +184,79 @@ Maps:
 
 ---
 
+## Data Model
+
+Vehicle movement records are stored in the `vehicle_movements` table.
+
+The app records:
+
+* Registration
+* IN / OUT status
+* Current stage
+* Vehicle type
+* Mileage
+* Parking location
+* Staff email
+* Optional movement note
+* GPS latitude and longitude
+* GPS accuracy
+* Created timestamp
+
+Each check-in, location update, or mark-out action creates a new movement row. Existing movement rows are not updated or deleted by the frontend.
+
+---
+
+## Security Model
+
+This project is designed for GitHub Pages, so all frontend code is public.
+
+Real data protection must come from Supabase Auth and Row Level Security, not from hiding elements in the browser.
+
+Security expectations:
+
+* Supabase Row Level Security must stay enabled on `public.vehicle_movements`
+* Only authenticated users should be able to read vehicle records
+* Only authenticated users should be able to insert movement records
+* Anonymous read or insert policies should not be created
+* Service role keys, database passwords, JWT secrets, and private keys must never be committed
+* The frontend should use only a Supabase publishable key
+* Users should be created manually in Supabase Auth
+* Customer personal data should not be stored in this prototype
+
+The SQL policy template is stored in `data/supabase-rls.sql`. Apply it in the Supabase SQL Editor after database setup, reset, or migration.
+
+See `SECURITY.md` for more detail.
+
+---
+
+## Setup Notes
+
+To run or deploy the app safely:
+
+* Create the `vehicle_movements` table in Supabase
+* Configure Supabase Auth users manually
+* Add the project URL and publishable key in `js/supabase-config.js`
+* Apply the authenticated-only RLS policies from `data/supabase-rls.sql`
+* Deploy the static files to GitHub Pages or another static host
+* Do not add service role keys or database credentials to frontend files
+
+Do not commit real credentials, service role keys, database passwords, JWT secrets, or private keys.
+
+---
+
 ## Limitations
 
 This is currently a proof of concept.
 
 The application does not currently include:
 
-* User accounts
-* Shared database
-* Multi-user support
 * Notifications
 * Vehicle assignment
 * Integration with dealership systems
 * Customer information
+* User profile display names
 
-All data is stored locally within the browser.
+Vehicle movement records are stored in Supabase and can be shared across browsers and devices. Users must sign in before using the vehicle tracking workflow.
 
 ---
 
@@ -190,8 +264,7 @@ All data is stored locally within the browser.
 
 Potential future enhancements:
 
-* Shared database
-* User authentication
+* User profile display names
 * Department assignment
 * Vehicle ownership tracking
 * Notifications between departments
@@ -232,3 +305,25 @@ Potential future enhancements:
 * Update Location panel now automatically hides when changing views
 * Mark Out remains a one-click action
 * Mark Out button is hidden once a vehicle is already OUT
+
+---
+
+# Supabase Auth Update
+
+## New Features
+
+* Added Supabase Auth login screen
+* Added sign out support
+* Hid the main app until a valid session exists
+* Removed manual "Updated by" fields
+* Saved the signed-in user's email as `staff_name`
+* Added authenticated-only RLS SQL template
+* Added security documentation
+
+## Security Improvements
+
+* Removed temporary Supabase connection logging
+* Kept database operations to SELECT and INSERT
+* Kept Mark Out as an insert-only movement event
+* Documented that frontend code is public on GitHub Pages
+* Documented that real protection depends on Supabase Auth and RLS
