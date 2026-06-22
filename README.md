@@ -156,7 +156,7 @@ Frontend:
 
 Storage:
 
-* Browser localStorage
+* Supabase database
 
 Hosting:
 
@@ -175,14 +175,12 @@ This is currently a proof of concept.
 The application does not currently include:
 
 * User accounts
-* Shared database
-* Multi-user support
 * Notifications
 * Vehicle assignment
 * Integration with dealership systems
 * Customer information
 
-All data is stored locally within the browser.
+Vehicle movement records are stored in Supabase and can be shared across browsers and devices.
 
 ---
 
@@ -190,7 +188,6 @@ All data is stored locally within the browser.
 
 Potential future enhancements:
 
-* Shared database
 * User authentication
 * Department assignment
 * Vehicle ownership tracking
