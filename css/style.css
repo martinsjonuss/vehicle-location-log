@@ -432,11 +432,6 @@ button:disabled {
   gap: 10px;
 }
 
-.history-toggle {
-  margin-top: 0;
-  width: 100%;
-}
-
 .vehicle-history {
   margin-top: 12px;
   display: grid;
