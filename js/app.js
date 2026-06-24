@@ -40,6 +40,11 @@ const refreshBtn = document.getElementById("refreshBtn");
 const GPS_PREFERENCE_KEY = "vehicleLocationLogGpsEnabled";
 const MAX_MILEAGE_DIGITS = 7;
 const MAX_REGISTRATION_CHARS = 15;
+const SEARCH_RESULTS_PER_PAGE = 5;
+const searchResultsState = {
+  records: [],
+  page: 1
+};
 
 function normaliseReg(value) {
   return value.trim().toUpperCase().replace(/\s+/g, "").slice(0, MAX_REGISTRATION_CHARS);
@@ -209,6 +214,30 @@ async function getVehicleHistory(reg) {
 
   if (error) return handleDbError(error, []);
   return (data || []).map(mapDbRecord);
+}
+
+async function getMatchingLatestRecords(searchTerm) {
+  const cleaned = normaliseReg(searchTerm).replace(/[%_]/g, "");
+  if (!cleaned) return [];
+
+  const { data, error } = await db
+    .from("vehicle_movements")
+    .select("*")
+    .ilike("registration", `%${cleaned}%`)
+    .order("created_at", { ascending: false })
+    .limit(100);
+
+  if (error) return handleDbError(error, []);
+
+  const latestByReg = new Map();
+  (data || []).forEach(row => {
+    const record = mapDbRecord(row);
+    if (!latestByReg.has(record.reg)) {
+      latestByReg.set(record.reg, record);
+    }
+  });
+
+  return Array.from(latestByReg.values());
 }
 
 function mapsUrl(record) {
@@ -429,6 +458,93 @@ async function renderVehicleResult(recordOrReg) {
   switchMainView("find");
 }
 
+async function renderSearchResults(searchTerm) {
+  const records = await getMatchingLatestRecords(searchTerm);
+  searchResultsState.records = records;
+  searchResultsState.page = 1;
+
+  if (records.length === 0) {
+    vehicleResult.className = "vehicle-result empty";
+    vehicleResult.innerHTML = "<p>No matching vehicles found.</p>";
+    return;
+  }
+
+  if (records.length === 1) {
+    await renderVehicleResult(records[0]);
+    return;
+  }
+
+  renderSearchResultsPage();
+}
+
+function renderSearchResultsPage() {
+  const records = searchResultsState.records;
+  const totalPages = Math.ceil(records.length / SEARCH_RESULTS_PER_PAGE);
+  searchResultsState.page = Math.min(Math.max(searchResultsState.page, 1), totalPages);
+
+  const startIndex = (searchResultsState.page - 1) * SEARCH_RESULTS_PER_PAGE;
+  const pageRecords = records.slice(startIndex, startIndex + SEARCH_RESULTS_PER_PAGE);
+
+  vehicleResult.className = "vehicle-result";
+  vehicleResult.innerHTML = `
+    <div class="search-results-heading">
+      <p class="small-note">${records.length} matching vehicles found</p>
+    </div>
+    <div class="history-list">
+      ${pageRecords.map(record => {
+        const statusClass = record.status === "IN" ? "status-in" : "status-out";
+        return `
+          <article class="history-card search-result-card" data-reg="${record.reg}">
+            <div class="history-top">
+              <div>
+                <span class="history-reg">${record.reg}</span>
+                <div class="status-line">
+                  <span class="activity-status ${statusClass}">${record.status}</span>
+                </div>
+              </div>
+              <span class="history-time">${formatTime(record.createdAt)}</span>
+            </div>
+            <p class="history-note">
+              ${[
+                record.stage,
+                record.parkingLocation ? `Parking: ${record.parkingLocation}` : ""
+              ].filter(Boolean).join(" · ")}
+            </p>
+          </article>
+        `;
+      }).join("")}
+    </div>
+    ${totalPages > 1 ? `
+      <div class="search-pagination">
+        <button class="ghost-button" type="button" data-action="search-prev" ${searchResultsState.page === 1 ? "disabled" : ""}>Previous</button>
+        <span class="pagination-status">Page ${searchResultsState.page} of ${totalPages}</span>
+        <button class="ghost-button" type="button" data-action="search-next" ${searchResultsState.page === totalPages ? "disabled" : ""}>Next</button>
+      </div>
+    ` : ""}
+  `;
+
+  vehicleResult.querySelectorAll(".search-result-card").forEach(card => {
+    card.addEventListener("click", () => renderVehicleResult(card.dataset.reg));
+  });
+
+  const previousButton = vehicleResult.querySelector("[data-action='search-prev']");
+  const nextButton = vehicleResult.querySelector("[data-action='search-next']");
+
+  if (previousButton) {
+    previousButton.addEventListener("click", () => {
+      searchResultsState.page -= 1;
+      renderSearchResultsPage();
+    });
+  }
+
+  if (nextButton) {
+    nextButton.addEventListener("click", () => {
+      searchResultsState.page += 1;
+      renderSearchResultsPage();
+    });
+  }
+}
+
 async function openUpdatePanel(reg) {
   const latest = await getLatestRecord(reg);
   if (!latest) return;
@@ -593,7 +709,7 @@ searchForm.addEventListener("submit", async event => {
     return;
   }
 
-  await renderVehicleResult(reg);
+  await renderSearchResults(reg);
 });
 
 updateForm.addEventListener("submit", async event => {
