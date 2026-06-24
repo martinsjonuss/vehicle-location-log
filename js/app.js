@@ -522,6 +522,12 @@ checkInForm.addEventListener("submit", async event => {
     return;
   }
 
+  const latest = await getLatestRecord(reg);
+  if (latest?.status === "IN") {
+    checkInMessage.textContent = "Vehicle is already checked in. Use Find Vehicle to Update Location instead.";
+    return;
+  }
+
   const button = checkInForm.querySelector("button[type='submit']");
   const parkingLocation = checkInParking.value;
   button.disabled = true;
