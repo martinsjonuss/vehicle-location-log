@@ -38,6 +38,7 @@ const cancelUpdateBtn = document.getElementById("cancelUpdateBtn");
 const activityList = document.getElementById("activityList");
 const refreshBtn = document.getElementById("refreshBtn");
 const GPS_PREFERENCE_KEY = "vehicleLocationLogGpsEnabled";
+const MAX_MILEAGE_DIGITS = 7;
 
 function normaliseReg(value) {
   return value.trim().toUpperCase().replace(/\s+/g, "");
@@ -51,7 +52,7 @@ function formatMileage(value) {
 }
 
 function cleanMileage(value) {
-  const cleaned = String(value || "").replace(/\D/g, "");
+  const cleaned = String(value || "").replace(/\D/g, "").slice(0, MAX_MILEAGE_DIGITS);
   return cleaned ? Number(cleaned) : null;
 }
 
@@ -526,7 +527,7 @@ checkInTab.addEventListener("click", () => switchMainView("checkin"));
 findTab.addEventListener("click", () => switchMainView("find"));
 
 checkInMileage.addEventListener("input", () => {
-  checkInMileage.value = String(checkInMileage.value || "").replace(/\D/g, "");
+  checkInMileage.value = String(checkInMileage.value || "").replace(/\D/g, "").slice(0, MAX_MILEAGE_DIGITS);
 });
 
 checkInForm.addEventListener("submit", async event => {
