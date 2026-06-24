@@ -132,6 +132,19 @@ h2 {
   flex-wrap: wrap;
 }
 
+.user-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.user-greeting {
+  color: var(--muted);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
 .quick-actions {
   padding: 8px;
   display: grid;
