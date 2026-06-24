@@ -38,16 +38,27 @@ const cancelUpdateBtn = document.getElementById("cancelUpdateBtn");
 const activityList = document.getElementById("activityList");
 const refreshBtn = document.getElementById("refreshBtn");
 const GPS_PREFERENCE_KEY = "vehicleLocationLogGpsEnabled";
+const MAX_MILEAGE_DIGITS = 7;
+const MAX_REGISTRATION_CHARS = 15;
 
 function normaliseReg(value) {
-  return value.trim().toUpperCase().replace(/\s+/g, "");
+  return value.trim().toUpperCase().replace(/\s+/g, "").slice(0, MAX_REGISTRATION_CHARS);
 }
 
 function formatMileage(value) {
-  if (!value) return "Not recorded";
+  if (value === null || value === undefined || value === "") return "Not recorded";
   const numeric = Number(value);
   if (Number.isNaN(numeric)) return value;
   return numeric.toLocaleString("en-GB");
+}
+
+function cleanMileage(value) {
+  const cleaned = String(value || "").replace(/\D/g, "").slice(0, MAX_MILEAGE_DIGITS);
+  return cleaned ? Number(cleaned) : null;
+}
+
+function cleanNote(value) {
+  return String(value || "").trim().slice(0, 150);
 }
 
 function formatTime(isoString) {
@@ -133,7 +144,7 @@ function mapDbRecord(row) {
     note: row.note || "",
     status: row.status,
     action: actionFromRecord(row),
-    mileage: row.mileage || "",
+    mileage: row.mileage ?? "",
     parkingLocation: row.parking_location || "",
     lat: toNullableNumber(row.latitude),
     lng: toNullableNumber(row.longitude),
@@ -148,10 +159,10 @@ function mapRecordForInsert(record) {
     status: record.status,
     stage: record.stage,
     vehicle_type: record.vehicleType,
-    mileage: record.mileage ? Number(record.mileage) : null,
+    mileage: cleanMileage(record.mileage),
     parking_location: record.parkingLocation || null,
     staff_name: record.staff,
-    note: record.note || null,
+    note: cleanNote(record.note) || null,
     latitude: toNullableNumber(record.lat),
     longitude: toNullableNumber(record.lng),
     accuracy: toNullableNumber(record.accuracy)
@@ -216,6 +227,10 @@ function hasValidAccuracy(record) {
   return typeof record.accuracy === "number" && Number.isFinite(record.accuracy);
 }
 
+function hasRecordedMileage(record) {
+  return record.mileage !== null && record.mileage !== undefined && record.mileage !== "";
+}
+
 function hasValidPosition(position) {
   return Boolean(position) &&
     Boolean(position.coords) &&
@@ -235,10 +250,10 @@ function buildRecord({ reg, staff, vehicleType, stage, note, status, action, pos
     staff: staff.trim() || "Demo User",
     vehicleType: vehicleType || "Customer vehicle",
     stage,
-    note: note.trim(),
+    note: cleanNote(note),
     status,
     action,
-    mileage: mileage || "",
+    mileage: cleanMileage(mileage),
     parkingLocation: parkingLocation || "",
     lat: position ? position.coords.latitude : null,
     lng: position ? position.coords.longitude : null,
@@ -329,7 +344,7 @@ function movementLine(record) {
     `${record.action} by ${record.staff}`,
     record.status ? `Status: ${record.status}` : "",
     record.parkingLocation ? `Parking: ${record.parkingLocation}` : "",
-    record.mileage ? `Mileage: ${formatMileage(record.mileage)}` : "",
+    hasRecordedMileage(record) ? `Mileage: ${formatMileage(record.mileage)}` : "",
     hasValidAccuracy(record) ? `GPS approx. ${Math.round(record.accuracy)}m` : "",
     record.note ? record.note : ""
   ].filter(Boolean).join(" · ");
@@ -511,6 +526,10 @@ async function renderActivity() {
 
 checkInTab.addEventListener("click", () => switchMainView("checkin"));
 findTab.addEventListener("click", () => switchMainView("find"));
+
+checkInMileage.addEventListener("input", () => {
+  checkInMileage.value = String(checkInMileage.value || "").replace(/\D/g, "").slice(0, MAX_MILEAGE_DIGITS);
+});
 
 checkInForm.addEventListener("submit", async event => {
   event.preventDefault();

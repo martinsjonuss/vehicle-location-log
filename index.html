@@ -66,12 +66,12 @@
       <form id="checkInForm" class="form-stack">
         <div>
           <label for="checkInReg">Vehicle registration</label>
-          <input id="checkInReg" type="text" placeholder="e.g. AB12 CDE" autocomplete="off" />
+          <input id="checkInReg" type="text" maxlength="15" placeholder="e.g. AB12 CDE" autocomplete="off" />
         </div>
 
         <div>
           <label for="checkInMileage">Mileage</label>
-          <input id="checkInMileage" type="number" inputmode="numeric" placeholder="e.g. 42185" autocomplete="off" />
+          <input id="checkInMileage" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="7" placeholder="e.g. 42185" autocomplete="off" />
         </div>
 
         <div>
@@ -112,8 +112,9 @@
         </div>
 
         <div>
-          <label for="checkInNote">Optional note</label>
-          <textarea id="checkInNote" placeholder="e.g. customer parking, back compound, near wash bay"></textarea>
+          <label for="checkInNote">Note</label>
+          <textarea id="checkInNote" maxlength="150" placeholder="e.g. customer parking, back compound, near wash bay"></textarea>
+          <p class="field-help">Max 150 characters</p>
         </div>
 
         <button type="submit" class="primary-button">Check In & Save Location</button>
@@ -129,7 +130,7 @@
       </div>
 
       <form id="searchForm" class="search-row">
-        <input id="searchReg" type="text" placeholder="Enter registration" autocomplete="off" />
+        <input id="searchReg" type="text" maxlength="15" placeholder="Enter registration" autocomplete="off" />
         <button type="submit" class="primary-button">Search</button>
       </form>
 
@@ -189,8 +190,9 @@
         </div>
 
         <div>
-          <label for="updateNote">Optional note</label>
-          <textarea id="updateNote" placeholder="e.g. parked beside workshop door, ready for customer collection"></textarea>
+          <label for="updateNote">Note</label>
+          <textarea id="updateNote" maxlength="150" placeholder="e.g. parked beside workshop door, ready for customer collection"></textarea>
+          <p class="field-help">Max 150 characters</p>
         </div>
 
         <div class="action-grid">
