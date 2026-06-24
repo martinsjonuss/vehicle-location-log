@@ -23,13 +23,16 @@ The app should only support sign-in and sign-out for existing Supabase users.
 ## Database Access
 
 RLS must remain enabled on `public.vehicle_movements`.
+RLS must also remain enabled on `public.user_profiles`.
 
 Only the `authenticated` role should have:
 
 * `SELECT` access for reading vehicle records
 * `INSERT` access for creating movement records
+* `SELECT` access for reading its own user profile
 
 Do not create `anon` read or insert policies for vehicle records.
+Do not create public profile policies that allow users to read every profile.
 
 The frontend should only create new movement rows. It should not update or delete existing vehicle movement records.
 

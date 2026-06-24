@@ -4,6 +4,7 @@ const loginForm = document.getElementById("loginForm");
 const loginEmail = document.getElementById("loginEmail");
 const loginPassword = document.getElementById("loginPassword");
 const loginMessage = document.getElementById("loginMessage");
+const userGreeting = document.getElementById("userGreeting");
 const signOutBtn = document.getElementById("signOutBtn");
 
 const checkInTab = document.getElementById("checkInTab");
@@ -44,6 +45,8 @@ const searchResultsState = {
   records: [],
   page: 1
 };
+let currentUserProfile = null;
+let currentAuthUser = null;
 
 function normaliseReg(value) {
   return value.trim().toUpperCase().replace(/\s+/g, "").slice(0, MAX_REGISTRATION_CHARS);
@@ -98,32 +101,62 @@ function initialiseGpsPreference() {
   setGpsEnabled(isGpsEnabled());
 }
 
-function showLogin() {
+function profileDisplayName() {
+  return currentUserProfile?.first_name || currentAuthUser?.email || "Unknown User";
+}
+
+function updateUserGreeting() {
+  userGreeting.textContent = currentAuthUser ? `Hi, ${profileDisplayName()}` : "";
+}
+
+function showLogin(message) {
   loginScreen.classList.remove("hidden");
   appShell.classList.add("hidden");
   updatePanel.classList.add("hidden");
   loginPassword.value = "";
+  userGreeting.textContent = "";
+  if (message !== undefined) {
+    loginMessage.textContent = message;
+  }
 }
 
 async function showApp() {
   loginScreen.classList.add("hidden");
   appShell.classList.remove("hidden");
   loginMessage.textContent = "";
+  updateUserGreeting();
   await renderActivity();
 }
 
-async function getCurrentStaffName() {
-  const {
-    data: { user },
-    error
-  } = await db.auth.getUser();
+async function loadCurrentUserProfile(user) {
+  currentAuthUser = user;
+  currentUserProfile = null;
+
+  const { data: profile, error } = await db
+    .from("user_profiles")
+    .select("id, first_name, email, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
 
   if (error) {
     console.error(error);
-    return "Unknown User";
+    alert("Profile could not be loaded. Using account email.");
+    updateUserGreeting();
+    return true;
   }
 
-  return user?.email || "Unknown User";
+  if (profile?.is_active === false) {
+    currentUserProfile = profile;
+    return false;
+  }
+
+  currentUserProfile = profile;
+  updateUserGreeting();
+  return true;
+}
+
+function getCurrentStaffName() {
+  return currentUserProfile?.first_name || currentAuthUser?.email || "Unknown User";
 }
 
 function actionFromRecord(record) {
@@ -793,10 +826,26 @@ signOutBtn.addEventListener("click", async () => {
   }
 });
 
+async function handleAuthenticatedSession(session) {
+  const canAccess = await loadCurrentUserProfile(session.user);
+
+  if (!canAccess) {
+    await db.auth.signOut();
+    currentAuthUser = null;
+    currentUserProfile = null;
+    showLogin("Your account is inactive. Please contact an administrator.");
+    return;
+  }
+
+  await showApp();
+}
+
 db.auth.onAuthStateChange(async (_event, session) => {
   if (session) {
-    await showApp();
+    await handleAuthenticatedSession(session);
   } else {
+    currentAuthUser = null;
+    currentUserProfile = null;
     showLogin();
   }
 });
@@ -814,7 +863,7 @@ async function initialiseAuth() {
   }
 
   if (session) {
-    await showApp();
+    await handleAuthenticatedSession(session);
   } else {
     showLogin();
   }
