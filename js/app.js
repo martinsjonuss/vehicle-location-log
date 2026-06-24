@@ -431,15 +431,16 @@ async function renderVehicleResult(recordOrReg) {
         <div class="detail-label">Note</div>
         <p class="detail-value">${record.note || "No note added"}</p>
       </div>
-      <button class="detail-card history-toggle" data-action="toggle-history" data-reg="${record.reg}">
+      <div class="detail-card">
         <div class="detail-label">Movement history</div>
         <p class="detail-value">${history.length} saved movement${history.length === 1 ? "" : "s"}</p>
-      </button>
+      </div>
     </div>
 
     <div class="result-actions">
       ${hasLocation ? `<a class="maps-button" href="${mapsUrl(record)}" target="_blank" rel="noopener">Open Location</a>` : ""}
       ${record.status === "IN" ? `<button class="primary-button" data-action="update-location" data-reg="${record.reg}">Update Location</button>` : ""}
+      <button class="primary-button" data-action="toggle-history" data-reg="${record.reg}">View movement history</button>
       ${record.status === "IN" ? `<button class="secondary-button" data-action="mark-out" data-reg="${record.reg}">Mark Out</button>` : ""}
     </div>
 
