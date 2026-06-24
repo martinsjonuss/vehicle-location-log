@@ -114,7 +114,7 @@ Marked OUT
 ### Activity Feed
 
 * Recent vehicle activity
-* Displays latest 10 updates
+* Displays latest 5 updates
 * Shows vehicle status
 * Quick access to vehicle records
 
@@ -300,7 +300,7 @@ Potential future enhancements:
 * Parking location displayed in vehicle details
 * Parking location displayed in movement history
 * Parking location displayed in recent activity
-* Recent activity limited to latest 10 records
+* Recent activity limited to latest 5 records
 
 ## User Experience
 
