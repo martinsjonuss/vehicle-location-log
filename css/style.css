@@ -208,6 +208,30 @@ textarea {
   resize: vertical;
 }
 
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: fit-content;
+  margin-bottom: 0;
+  color: var(--text);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.toggle-row input {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--accent);
+}
+
+.form-message {
+  color: var(--muted);
+  line-height: 1.4;
+  margin: 0;
+  min-height: 1.4em;
+}
+
 input:focus, select:focus, textarea:focus {
   border-color: rgba(201, 166, 70, 0.7);
   box-shadow: 0 0 0 4px rgba(201, 166, 70, 0.1);

@@ -78,7 +78,8 @@ Marked OUT
 * Vehicle type selection
 * Optional parking location selection
 * Optional notes
-* GPS location capture
+* Optional GPS location capture
+* Parking location fallback when GPS is unavailable
 * Automatic status assignment (IN)
 
 ### Vehicle Search
@@ -98,6 +99,7 @@ Marked OUT
 * Update parking location
 * Add movement notes
 * Record movement history
+* Save with parking location only when GPS is unavailable
 * Mark vehicle OUT by creating a new movement record
 
 ### Movement History
@@ -199,11 +201,13 @@ The app records:
 * Parking location
 * Staff email
 * Optional movement note
-* GPS latitude and longitude
-* GPS accuracy
+* Optional GPS latitude and longitude
+* Optional GPS accuracy
 * Created timestamp
 
 Each check-in, location update, or mark-out action creates a new movement row. Existing movement rows are not updated or deleted by the frontend.
+
+Vehicle records are stored in Supabase. Browser `localStorage` is used only for the user's GPS capture preference.
 
 ---
 
