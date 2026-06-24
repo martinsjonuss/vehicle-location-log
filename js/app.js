@@ -17,7 +17,9 @@ const checkInReg = document.getElementById("checkInReg");
 const checkInMileage = document.getElementById("checkInMileage");
 const checkInType = document.getElementById("checkInType");
 const checkInParking = document.getElementById("checkInParking");
+const checkInGpsEnabled = document.getElementById("checkInGpsEnabled");
 const checkInNote = document.getElementById("checkInNote");
+const checkInMessage = document.getElementById("checkInMessage");
 
 const searchForm = document.getElementById("searchForm");
 const searchReg = document.getElementById("searchReg");
@@ -28,11 +30,14 @@ const updateTitle = document.getElementById("updateTitle");
 const updateReg = document.getElementById("updateReg");
 const updateStage = document.getElementById("updateStage");
 const updateParking = document.getElementById("updateParking");
+const updateGpsEnabled = document.getElementById("updateGpsEnabled");
 const updateNote = document.getElementById("updateNote");
+const updateMessage = document.getElementById("updateMessage");
 const cancelUpdateBtn = document.getElementById("cancelUpdateBtn");
 
 const activityList = document.getElementById("activityList");
 const refreshBtn = document.getElementById("refreshBtn");
+const GPS_PREFERENCE_KEY = "vehicleLocationLogGpsEnabled";
 
 function normaliseReg(value) {
   return value.trim().toUpperCase().replace(/\s+/g, "");
@@ -62,6 +67,20 @@ function switchMainView(viewName) {
   checkInTab.classList.toggle("active", checkInActive);
   findTab.classList.toggle("active", !checkInActive);
   updatePanel.classList.add("hidden");
+}
+
+function isGpsEnabled() {
+  return localStorage.getItem(GPS_PREFERENCE_KEY) !== "false";
+}
+
+function setGpsEnabled(enabled) {
+  localStorage.setItem(GPS_PREFERENCE_KEY, enabled ? "true" : "false");
+  checkInGpsEnabled.checked = enabled;
+  updateGpsEnabled.checked = enabled;
+}
+
+function initialiseGpsPreference() {
+  setGpsEnabled(isGpsEnabled());
 }
 
 function showLogin() {
@@ -98,6 +117,12 @@ function actionFromRecord(record) {
   return "Location updated";
 }
 
+function toNullableNumber(value) {
+  if (value === null || value === undefined || value === "") return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+}
+
 function mapDbRecord(row) {
   return {
     id: row.id,
@@ -110,9 +135,9 @@ function mapDbRecord(row) {
     action: actionFromRecord(row),
     mileage: row.mileage || "",
     parkingLocation: row.parking_location || "",
-    lat: row.latitude,
-    lng: row.longitude,
-    accuracy: row.accuracy,
+    lat: toNullableNumber(row.latitude),
+    lng: toNullableNumber(row.longitude),
+    accuracy: toNullableNumber(row.accuracy),
     createdAt: row.created_at
   };
 }
@@ -127,9 +152,9 @@ function mapRecordForInsert(record) {
     parking_location: record.parkingLocation || null,
     staff_name: record.staff,
     note: record.note || null,
-    latitude: record.lat,
-    longitude: record.lng,
-    accuracy: record.accuracy
+    latitude: toNullableNumber(record.lat),
+    longitude: toNullableNumber(record.lng),
+    accuracy: toNullableNumber(record.accuracy)
   };
 }
 
@@ -179,6 +204,30 @@ function mapsUrl(record) {
   return `https://www.google.com/maps?q=${record.lat},${record.lng}`;
 }
 
+function isValidCoordinate(value) {
+  return typeof value === "number" && Number.isFinite(value);
+}
+
+function hasValidGps(record) {
+  return isValidCoordinate(record.lat) && isValidCoordinate(record.lng);
+}
+
+function hasValidAccuracy(record) {
+  return typeof record.accuracy === "number" && Number.isFinite(record.accuracy);
+}
+
+function hasValidPosition(position) {
+  return Boolean(position) &&
+    Boolean(position.coords) &&
+    isValidCoordinate(position.coords.latitude) &&
+    isValidCoordinate(position.coords.longitude);
+}
+
+function showFormMessage(messageElement, message) {
+  messageElement.textContent = message;
+  alert(message);
+}
+
 function buildRecord({ reg, staff, vehicleType, stage, note, status, action, position, mileage, parkingLocation }) {
   return {
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
@@ -223,33 +272,56 @@ async function addRecord(record) {
   await renderVehicleResult(record.reg);
 }
 
-function captureLocation(successCallback, button) {
-  if (!navigator.geolocation) {
-    alert("This browser does not support GPS location capture.");
-    return;
-  }
+function captureGpsPosition() {
+  return new Promise((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error("Geolocation is not supported."));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      resolve,
+      reject,
+      {
+        enableHighAccuracy: true,
+        timeout: 12000,
+        maximumAge: 0
+      }
+    );
+  });
+}
+
+async function getGpsPositionIfEnabled(button) {
+  if (!isGpsEnabled()) return null;
 
   const originalText = button.textContent;
   button.textContent = "Getting GPS...";
-  button.disabled = true;
 
-  navigator.geolocation.getCurrentPosition(
-    position => {
-      button.textContent = originalText;
-      button.disabled = false;
-      successCallback(position);
-    },
-    error => {
-      button.textContent = originalText;
-      button.disabled = false;
-      alert(`Location could not be captured: ${error.message}`);
-    },
-    {
-      enableHighAccuracy: true,
-      timeout: 12000,
-      maximumAge: 0
+  try {
+    return await captureGpsPosition();
+  } catch (error) {
+    console.warn("GPS unavailable:", error);
+    return null;
+  } finally {
+    button.textContent = originalText;
+  }
+}
+
+async function getPositionForSave({ button, parkingLocation, messageElement }) {
+  const gpsEnabled = isGpsEnabled();
+  const position = await getGpsPositionIfEnabled(button);
+
+  if (hasValidPosition(position)) return position;
+
+  if (parkingLocation) {
+    if (gpsEnabled) {
+      showFormMessage(messageElement, "GPS unavailable. Vehicle saved using parking location only.");
     }
-  );
+    return null;
+  }
+
+  showFormMessage(messageElement, "GPS is unavailable. Please select a parking location before saving.");
+  return undefined;
 }
 
 function movementLine(record) {
@@ -258,7 +330,7 @@ function movementLine(record) {
     record.status ? `Status: ${record.status}` : "",
     record.parkingLocation ? `Parking: ${record.parkingLocation}` : "",
     record.mileage ? `Mileage: ${formatMileage(record.mileage)}` : "",
-    record.accuracy ? `GPS approx. ${Math.round(record.accuracy)}m` : "",
+    hasValidAccuracy(record) ? `GPS approx. ${Math.round(record.accuracy)}m` : "",
     record.note ? record.note : ""
   ].filter(Boolean).join(" · ");
 }
@@ -273,7 +345,7 @@ async function renderVehicleResult(recordOrReg) {
   }
 
   const history = await getVehicleHistory(record.reg);
-  const hasLocation = record.lat !== null && record.lng !== null;
+  const hasLocation = hasValidGps(record);
   const statusClass = record.status === "IN" ? "status-in" : "status-out";
 
   vehicleResult.className = "vehicle-result";
@@ -309,7 +381,7 @@ async function renderVehicleResult(recordOrReg) {
       </div>
       <div class="detail-card">
         <div class="detail-label">GPS accuracy</div>
-        <p class="detail-value">${hasLocation ? `Approx. ${Math.round(record.accuracy)}m` : "No location saved"}</p>
+        <p class="detail-value">${hasValidAccuracy(record) ? `Approx. ${Math.round(record.accuracy)}m` : "Not available"}</p>
       </div>
       <div class="detail-card">
         <div class="detail-label">Note</div>
@@ -440,8 +512,9 @@ async function renderActivity() {
 checkInTab.addEventListener("click", () => switchMainView("checkin"));
 findTab.addEventListener("click", () => switchMainView("find"));
 
-checkInForm.addEventListener("submit", event => {
+checkInForm.addEventListener("submit", async event => {
   event.preventDefault();
+  checkInMessage.textContent = "";
 
   const reg = normaliseReg(checkInReg.value);
   if (!reg) {
@@ -450,7 +523,18 @@ checkInForm.addEventListener("submit", event => {
   }
 
   const button = checkInForm.querySelector("button[type='submit']");
-  captureLocation(async position => {
+  const parkingLocation = checkInParking.value;
+  button.disabled = true;
+
+  try {
+    const position = await getPositionForSave({
+      button,
+      parkingLocation,
+      messageElement: checkInMessage
+    });
+
+    if (position === undefined) return;
+
     const staffName = await getCurrentStaffName();
     const record = buildRecord({
       reg,
@@ -461,7 +545,7 @@ checkInForm.addEventListener("submit", event => {
       status: "IN",
       action: "Checked in",
       mileage: checkInMileage.value,
-      parkingLocation: checkInParking.value,
+      parkingLocation,
       position
     });
 
@@ -470,7 +554,9 @@ checkInForm.addEventListener("submit", event => {
     checkInMileage.value = "";
     checkInParking.value = "";
     checkInNote.value = "";
-  }, button);
+  } finally {
+    button.disabled = false;
+  }
 });
 
 searchForm.addEventListener("submit", async event => {
@@ -487,12 +573,24 @@ searchForm.addEventListener("submit", async event => {
 
 updateForm.addEventListener("submit", async event => {
   event.preventDefault();
+  updateMessage.textContent = "";
 
   const latest = await getLatestRecord(updateReg.value);
   if (!latest) return;
 
   const button = updateForm.querySelector("button[type='submit']");
-  captureLocation(async position => {
+  const parkingLocation = updateParking.value;
+  button.disabled = true;
+
+  try {
+    const position = await getPositionForSave({
+      button,
+      parkingLocation,
+      messageElement: updateMessage
+    });
+
+    if (position === undefined) return;
+
     const staffName = await getCurrentStaffName();
     const record = buildRecord({
       reg: latest.reg,
@@ -503,14 +601,16 @@ updateForm.addEventListener("submit", async event => {
       status: "IN",
       action: "Location updated",
       mileage: latest.mileage || "",
-      parkingLocation: updateParking.value,
+      parkingLocation,
       position
     });
 
     await addRecord(record);
     updatePanel.classList.add("hidden");
     updateNote.value = "";
-  }, button);
+  } finally {
+    button.disabled = false;
+  }
 });
 
 cancelUpdateBtn.addEventListener("click", () => {
@@ -523,6 +623,9 @@ refreshBtn.addEventListener("click", async () => {
   vehicleResult.innerHTML = "<p>Search for a registration to view the latest status, location, and movement history.</p>";
   updatePanel.classList.add("hidden");
 });
+
+checkInGpsEnabled.addEventListener("change", () => setGpsEnabled(checkInGpsEnabled.checked));
+updateGpsEnabled.addEventListener("change", () => setGpsEnabled(updateGpsEnabled.checked));
 
 loginForm.addEventListener("submit", async event => {
   event.preventDefault();
@@ -582,4 +685,5 @@ async function initialiseAuth() {
   }
 }
 
+initialiseGpsPreference();
 initialiseAuth();

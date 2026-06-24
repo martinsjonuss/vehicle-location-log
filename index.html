@@ -102,12 +102,21 @@
           </select>
         </div>
 
+        <div class="gps-toggle">
+          <span class="toggle-label">Capture GPS location</span>
+          <label class="toggle-switch" for="checkInGpsEnabled" aria-label="Capture GPS location">
+            <input id="checkInGpsEnabled" type="checkbox" />
+            <span class="toggle-slider" aria-hidden="true"></span>
+          </label>
+        </div>
+
         <div>
           <label for="checkInNote">Optional note</label>
           <textarea id="checkInNote" placeholder="e.g. customer parking, back compound, near wash bay"></textarea>
         </div>
 
         <button type="submit" class="primary-button">Check In & Save Location</button>
+        <p id="checkInMessage" class="form-message" aria-live="polite"></p>
         
       </form>
     </section>
@@ -169,6 +178,14 @@
           </select>
         </div>
 
+        <div class="gps-toggle">
+          <span class="toggle-label">Capture GPS location</span>
+          <label class="toggle-switch" for="updateGpsEnabled" aria-label="Capture GPS location">
+            <input id="updateGpsEnabled" type="checkbox" />
+            <span class="toggle-slider" aria-hidden="true"></span>
+          </label>
+        </div>
+
         <div>
           <label for="updateNote">Optional note</label>
           <textarea id="updateNote" placeholder="e.g. parked beside workshop door, ready for customer collection"></textarea>
@@ -178,6 +195,7 @@
           <button type="submit" class="primary-button">Save New Location</button>
           <button id="cancelUpdateBtn" type="button" class="ghost-button">Cancel</button>
         </div>
+        <p id="updateMessage" class="form-message" aria-live="polite"></p>
       </form>
     </section>
 
