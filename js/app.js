@@ -39,9 +39,10 @@ const activityList = document.getElementById("activityList");
 const refreshBtn = document.getElementById("refreshBtn");
 const GPS_PREFERENCE_KEY = "vehicleLocationLogGpsEnabled";
 const MAX_MILEAGE_DIGITS = 7;
+const MAX_REGISTRATION_CHARS = 15;
 
 function normaliseReg(value) {
-  return value.trim().toUpperCase().replace(/\s+/g, "");
+  return value.trim().toUpperCase().replace(/\s+/g, "").slice(0, MAX_REGISTRATION_CHARS);
 }
 
 function formatMileage(value) {
