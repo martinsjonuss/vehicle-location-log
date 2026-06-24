@@ -290,6 +290,13 @@ textarea {
   min-height: 1.4em;
 }
 
+.field-help {
+  color: var(--muted);
+  font-size: 0.78rem;
+  line-height: 1.35;
+  margin: 7px 0 0;
+}
+
 input:focus, select:focus, textarea:focus {
   border-color: rgba(201, 166, 70, 0.7);
   box-shadow: 0 0 0 4px rgba(201, 166, 70, 0.1);
