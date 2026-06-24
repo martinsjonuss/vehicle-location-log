@@ -144,15 +144,16 @@ Examples:
 
 The application currently supports:
 
-* Sales
+* Drive Thru
 * Budget
+* Sales
+* Wash/Valet
 * Parking 1
 * Parking 2
 * Parking 3
 * Parking 4
 * Parking 5
-* Parking 6
-* Parking 7
+* Customer Car Park
 * Other
 
 Parking locations are optional and can be used alongside GPS location data.
