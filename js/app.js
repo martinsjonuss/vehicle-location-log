@@ -36,7 +36,6 @@ const updateMessage = document.getElementById("updateMessage");
 const cancelUpdateBtn = document.getElementById("cancelUpdateBtn");
 
 const activityList = document.getElementById("activityList");
-const refreshBtn = document.getElementById("refreshBtn");
 const GPS_PREFERENCE_KEY = "vehicleLocationLogGpsEnabled";
 const MAX_MILEAGE_DIGITS = 7;
 const MAX_REGISTRATION_CHARS = 15;
@@ -372,6 +371,7 @@ function movementLine(record) {
   return [
     `${record.action} by ${record.staff}`,
     record.status ? `Status: ${record.status}` : "",
+    record.stage ? `Current Stage: ${record.stage}` : "",
     record.parkingLocation ? `Parking: ${record.parkingLocation}` : "",
     hasRecordedMileage(record) ? `Mileage: ${formatMileage(record.mileage)}` : "",
     hasValidAccuracy(record) ? `GPS approx. ${Math.round(record.accuracy)}m` : "",
@@ -608,7 +608,7 @@ async function renderActivity() {
     .from("vehicle_movements")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(10);
+    .limit(5);
 
   const records = error ? handleDbError(error, []) : (data || []).map(mapDbRecord);
 
@@ -755,13 +755,6 @@ updateForm.addEventListener("submit", async event => {
 });
 
 cancelUpdateBtn.addEventListener("click", () => {
-  updatePanel.classList.add("hidden");
-});
-
-refreshBtn.addEventListener("click", async () => {
-  await renderActivity();
-  vehicleResult.className = "vehicle-result empty";
-  vehicleResult.innerHTML = "<p>Search for a registration to view the latest status, location, and movement history.</p>";
   updatePanel.classList.add("hidden");
 });
 
