@@ -120,8 +120,13 @@ function updateUserGreeting() {
   userGreeting.textContent = currentAuthUser ? `Hi, ${profileDisplayName()}` : "";
 }
 
+function setLoginBackground(active) {
+  document.documentElement.classList.toggle("login-background", active);
+  document.body.classList.toggle("login-background", active);
+}
+
 function showLoading() {
-  document.body.classList.remove("login-background");
+  setLoginBackground(false);
   loadingScreen.classList.remove("hidden");
   loginScreen.classList.add("hidden");
   appShell.classList.add("hidden");
@@ -129,7 +134,7 @@ function showLoading() {
 
 function showLogin(message) {
   closeParkingMap();
-  document.body.classList.add("login-background");
+  setLoginBackground(true);
   loadingScreen.classList.add("hidden");
   loginScreen.classList.remove("hidden");
   appShell.classList.add("hidden");
@@ -197,7 +202,7 @@ async function openParkingMap() {
 }
 
 async function showApp() {
-  document.body.classList.remove("login-background");
+  setLoginBackground(false);
   loginScreen.classList.add("hidden");
   appShell.classList.remove("hidden");
   loginMessage.textContent = "";
