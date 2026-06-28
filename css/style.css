@@ -96,8 +96,6 @@ button { border: 0; }
 
 .auth-panel, .hero-card { padding: 22px; }
 
-.auth-panel h1 { font-size: clamp(2rem, 8vw, 2.7rem); }
-
 .auth-panel form { margin-top: 20px; }
 
 .auth-message {
