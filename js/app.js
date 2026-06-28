@@ -1,3 +1,4 @@
+const loadingScreen = document.getElementById("loadingScreen");
 const loginScreen = document.getElementById("loginScreen");
 const appShell = document.getElementById("appShell");
 const loginForm = document.getElementById("loginForm");
@@ -56,6 +57,7 @@ const searchResultsState = {
 };
 let currentUserProfile = null;
 let currentAuthUser = null;
+let initialAuthResolved = false;
 
 function normaliseReg(value) {
   return value.trim().toUpperCase().replace(/\s+/g, "").slice(0, MAX_REGISTRATION_CHARS);
@@ -118,8 +120,15 @@ function updateUserGreeting() {
   userGreeting.textContent = currentAuthUser ? `Hi, ${profileDisplayName()}` : "";
 }
 
+function showLoading() {
+  loadingScreen.classList.remove("hidden");
+  loginScreen.classList.add("hidden");
+  appShell.classList.add("hidden");
+}
+
 function showLogin(message) {
   closeParkingMap();
+  loadingScreen.classList.add("hidden");
   loginScreen.classList.remove("hidden");
   appShell.classList.add("hidden");
   updatePanel.classList.add("hidden");
@@ -191,6 +200,7 @@ async function showApp() {
   loginMessage.textContent = "";
   updateUserGreeting();
   await renderActivity();
+  loadingScreen.classList.add("hidden");
 }
 
 async function loadCurrentUserProfile(user) {
@@ -889,11 +899,13 @@ loginForm.addEventListener("submit", async event => {
 });
 
 signOutBtn.addEventListener("click", async () => {
+  showLoading();
   const { error } = await db.auth.signOut();
 
   if (error) {
     console.error(error);
     alert("Sign out failed. Please try again.");
+    await showApp();
   }
 });
 
@@ -911,7 +923,9 @@ async function handleAuthenticatedSession(session) {
   await showApp();
 }
 
-db.auth.onAuthStateChange(async (_event, session) => {
+async function resolveAuthState(session) {
+  showLoading();
+
   if (session) {
     await handleAuthenticatedSession(session);
   } else {
@@ -919,24 +933,46 @@ db.auth.onAuthStateChange(async (_event, session) => {
     currentUserProfile = null;
     showLogin();
   }
-});
+}
 
-async function initialiseAuth() {
-  const {
-    data: { session },
-    error
-  } = await db.auth.getSession();
+db.auth.onAuthStateChange((event, session) => {
+  if (!initialAuthResolved || event === "INITIAL_SESSION") return;
 
-  if (error) {
-    console.error(error);
-    showLogin();
+  if (event === "TOKEN_REFRESHED" && session?.user) {
+    currentAuthUser = session.user;
     return;
   }
 
-  if (session) {
-    await handleAuthenticatedSession(session);
-  } else {
-    showLogin();
+  if (
+    event === "SIGNED_IN" &&
+    currentAuthUser?.id === session?.user?.id &&
+    !appShell.classList.contains("hidden")
+  ) {
+    return;
+  }
+
+  resolveAuthState(session).catch(error => {
+    console.error(error);
+    showLogin("Could not verify your session. Please sign in again.");
+  });
+});
+
+async function initialiseAuth() {
+  showLoading();
+
+  try {
+    const {
+      data: { session },
+      error
+    } = await db.auth.getSession();
+
+    if (error) throw error;
+    await resolveAuthState(session);
+  } catch (error) {
+    console.error(error);
+    showLogin("Could not verify your session. Please sign in again.");
+  } finally {
+    initialAuthResolved = true;
   }
 }
 

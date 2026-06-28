@@ -7,7 +7,14 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
-  <section id="loginScreen" class="auth-shell">
+  <section id="loadingScreen" class="loading-shell" aria-live="polite" aria-busy="true">
+    <div class="loading-content">
+      <span class="loading-spinner" aria-hidden="true"></span>
+      <p>Loading...</p>
+    </div>
+  </section>
+
+  <section id="loginScreen" class="auth-shell hidden">
     <div class="auth-panel">
       <div class="brand-row">
         <div>
