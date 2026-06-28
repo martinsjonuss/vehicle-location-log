@@ -659,9 +659,9 @@ async function openUpdatePanel(reg) {
   if (!latest) return;
 
   updateReg.value = latest.reg;
-  updateParking.value = latest.parkingLocation || "";
+  updateParking.value = "";
   updateNote.value = "";
-  updateStage.value = "Moved / Reparked";
+  updateStage.value = "Parked";
   updateTitle.textContent = `Update ${latest.reg}`;
   updatePanel.classList.remove("hidden");
   updatePanel.scrollIntoView({ behavior: "smooth", block: "start" });
