@@ -1,6 +1,7 @@
 :root {
   --bg: #07110d;
   --header-background: url("../assets/images/bg-header-desktop.webp");
+  --login-background: url("../assets/images/background-jlr-desktop.webp");
   --panel: #101b15;
   --line: rgba(244, 241, 232, 0.13);
   --text: #f4f1e8;
@@ -76,9 +77,25 @@ button { border: 0; }
 }
 
 .auth-shell {
+  position: relative;
+  isolation: isolate;
   min-height: 100vh;
   display: grid;
   align-items: center;
+}
+
+.auth-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(3, 8, 6, 0.46), rgba(3, 8, 6, 0.64)),
+    var(--login-background);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
 }
 
 .app-shell {
@@ -92,6 +109,13 @@ button { border: 0; }
   background: linear-gradient(180deg, rgba(19, 29, 23, 0.9), rgba(10, 18, 14, 0.86));
   box-shadow: var(--shadow);
   backdrop-filter: blur(6px);
+}
+
+.auth-panel {
+  position: relative;
+  z-index: 1;
+  background: rgba(10, 18, 14, 0.86);
+  backdrop-filter: blur(4px);
 }
 
 .auth-panel, .hero-card { padding: 22px; }
@@ -731,17 +755,26 @@ button:disabled {
 }
 
 @media (max-width: 600px) {
-  :root { --header-background: url("../assets/images/bg-header-mobile.webp"); }
+  :root {
+    --header-background: url("../assets/images/bg-header-mobile.webp");
+    --login-background: url("../assets/images/background-jlr-mobile.webp");
+  }
 
   .hero-card { min-height: 280px; }
 }
 
 @media (min-width: 601px) and (max-width: 1024px) {
-  :root { --header-background: url("../assets/images/bg-header-tablet.webp"); }
+  :root {
+    --header-background: url("../assets/images/bg-header-tablet.webp");
+    --login-background: url("../assets/images/background-jlr-tablet.webp");
+  }
 }
 
 @media (min-width: 1025px) and (max-width: 1920px) {
-  :root { --header-background: url("../assets/images/bg-header-laptop.webp"); }
+  :root {
+    --header-background: url("../assets/images/bg-header-laptop.webp");
+    --login-background: url("../assets/images/background-jlr-laptop.webp");
+  }
 }
 
 /* v3 additions */
