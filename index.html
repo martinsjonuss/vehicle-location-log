@@ -78,7 +78,10 @@
         </div>
 
         <div>
-          <label for="checkInParking">Parking location</label>
+          <div class="field-label-row">
+            <label for="checkInParking">Parking location</label>
+            <button type="button" class="parking-map-info" aria-label="View parking map">i</button>
+          </div>
           <select id="checkInParking">
             <option value="">Select parking location</option>
             <option>Drive Thru</option>
@@ -156,7 +159,10 @@
         </div>
 
         <div>
-          <label for="updateParking">Parking location</label>
+          <div class="field-label-row">
+            <label for="updateParking">Parking location</label>
+            <button type="button" class="parking-map-info" aria-label="View parking map">i</button>
+          </div>
           <select id="updateParking">
             <option value="">Select parking location</option>
             <option>Drive Thru</option>
@@ -203,6 +209,19 @@
       <div id="activityList" class="history-list"></div>
     </section>
   </main>
+
+  <dialog id="parkingMapModal" class="parking-map-modal" aria-labelledby="parkingMapTitle">
+    <div class="parking-map-dialog">
+      <div class="parking-map-header">
+        <h2 id="parkingMapTitle">Parking map</h2>
+        <button id="parkingMapClose" type="button" class="parking-map-close" aria-label="Close parking map">&times;</button>
+      </div>
+      <div id="parkingMapViewport" class="parking-map-viewport">
+        <p id="parkingMapMessage" class="parking-map-message" aria-live="polite"></p>
+        <img id="parkingMapImage" class="parking-map-image hidden" alt="Dealership parking location map" />
+      </div>
+    </div>
+  </dialog>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="js/supabase-config.js"></script>

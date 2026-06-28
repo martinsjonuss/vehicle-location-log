@@ -37,7 +37,16 @@ const updateMessage = document.getElementById("updateMessage");
 const cancelUpdateBtn = document.getElementById("cancelUpdateBtn");
 
 const activityList = document.getElementById("activityList");
+const parkingMapButtons = document.querySelectorAll(".parking-map-info");
+const parkingMapModal = document.getElementById("parkingMapModal");
+const parkingMapClose = document.getElementById("parkingMapClose");
+const parkingMapViewport = document.getElementById("parkingMapViewport");
+const parkingMapMessage = document.getElementById("parkingMapMessage");
+const parkingMapImage = document.getElementById("parkingMapImage");
 const GPS_PREFERENCE_KEY = "vehicleLocationLogGpsEnabled";
+const PARKING_MAP_BUCKET = "parking-maps";
+const PARKING_MAP_FILE = "compound-map.png";
+const PARKING_MAP_URL_LIFETIME_SECONDS = 60;
 const MAX_MILEAGE_DIGITS = 7;
 const MAX_REGISTRATION_CHARS = 15;
 const SEARCH_RESULTS_PER_PAGE = 5;
@@ -110,6 +119,7 @@ function updateUserGreeting() {
 }
 
 function showLogin(message) {
+  closeParkingMap();
   loginScreen.classList.remove("hidden");
   appShell.classList.add("hidden");
   updatePanel.classList.add("hidden");
@@ -118,6 +128,61 @@ function showLogin(message) {
   if (message !== undefined) {
     loginMessage.textContent = message;
   }
+}
+
+function resetParkingMap() {
+  parkingMapImage.removeAttribute("src");
+  parkingMapImage.classList.add("hidden");
+  parkingMapMessage.textContent = "";
+  parkingMapMessage.classList.remove("hidden");
+  parkingMapViewport.removeAttribute("aria-busy");
+}
+
+function closeParkingMap() {
+  if (parkingMapModal.open) parkingMapModal.close();
+  resetParkingMap();
+}
+
+async function openParkingMap() {
+  const {
+    data: { session },
+    error: sessionError
+  } = await db.auth.getSession();
+
+  if (sessionError || !session) {
+    if (sessionError) console.error(sessionError);
+    showLogin("Please sign in to view the parking map.");
+    return;
+  }
+
+  resetParkingMap();
+  parkingMapMessage.textContent = "Loading parking map...";
+  parkingMapViewport.setAttribute("aria-busy", "true");
+  parkingMapModal.showModal();
+
+  const { data, error } = await db.storage
+    .from(PARKING_MAP_BUCKET)
+    .createSignedUrl(PARKING_MAP_FILE, PARKING_MAP_URL_LIFETIME_SECONDS);
+
+  if (!parkingMapModal.open) return;
+
+  if (error || !data?.signedUrl) {
+    if (error) console.error(error);
+    parkingMapViewport.removeAttribute("aria-busy");
+    parkingMapMessage.textContent = "Could not load parking map.";
+    return;
+  }
+
+  parkingMapImage.onload = () => {
+    parkingMapViewport.removeAttribute("aria-busy");
+    parkingMapMessage.classList.add("hidden");
+    parkingMapImage.classList.remove("hidden");
+  };
+  parkingMapImage.onerror = () => {
+    parkingMapViewport.removeAttribute("aria-busy");
+    parkingMapMessage.textContent = "Could not load parking map.";
+  };
+  parkingMapImage.src = data.signedUrl;
 }
 
 async function showApp() {
@@ -676,6 +741,12 @@ async function renderActivity() {
 
 checkInTab.addEventListener("click", () => switchMainView("checkin"));
 findTab.addEventListener("click", () => switchMainView("find"));
+parkingMapButtons.forEach(button => button.addEventListener("click", openParkingMap));
+parkingMapClose.addEventListener("click", closeParkingMap);
+parkingMapModal.addEventListener("click", event => {
+  if (event.target === parkingMapModal) closeParkingMap();
+});
+parkingMapModal.addEventListener("close", resetParkingMap);
 
 checkInMileage.addEventListener("input", () => {
   checkInMileage.value = String(checkInMileage.value || "").replace(/\D/g, "").slice(0, MAX_MILEAGE_DIGITS);
