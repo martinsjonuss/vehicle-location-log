@@ -121,6 +121,7 @@ function updateUserGreeting() {
 }
 
 function showLoading() {
+  document.body.classList.remove("login-background");
   loadingScreen.classList.remove("hidden");
   loginScreen.classList.add("hidden");
   appShell.classList.add("hidden");
@@ -128,6 +129,7 @@ function showLoading() {
 
 function showLogin(message) {
   closeParkingMap();
+  document.body.classList.add("login-background");
   loadingScreen.classList.add("hidden");
   loginScreen.classList.remove("hidden");
   appShell.classList.add("hidden");
@@ -195,6 +197,7 @@ async function openParkingMap() {
 }
 
 async function showApp() {
+  document.body.classList.remove("login-background");
   loginScreen.classList.add("hidden");
   appShell.classList.remove("hidden");
   loginMessage.textContent = "";
