@@ -1,12 +1,5 @@
 :root {
   --bg: #07110d;
-  --header-background: url("../assets/images/bg-header-desktop.webp");
-  --login-background: url("../assets/images/background-jlr-desktop.webp");
-  --app-page-background:
-    radial-gradient(circle at top left, rgba(201, 166, 70, 0.16), transparent 28rem),
-    radial-gradient(circle at bottom right, rgba(37, 91, 62, 0.18), transparent 30rem),
-    linear-gradient(135deg, #030706 0%, var(--bg) 58%, #12150f 100%);
-  --active-page-background: var(--app-page-background);
   --panel: #101b15;
   --line: rgba(244, 241, 232, 0.13);
   --text: #f4f1e8;
@@ -21,53 +14,15 @@
 
 * { box-sizing: border-box; }
 
-html,
 body {
   margin: 0;
-  min-height: 100%;
-  overflow-x: hidden;
-}
-
-html {
-  background-color: #03110c;
-  background-image: var(--active-page-background);
-  background-size: cover;
-  background-position: center top;
-  background-repeat: no-repeat;
-}
-
-.login-background {
-  --active-page-background:
-    linear-gradient(rgba(3, 8, 6, 0.46), rgba(3, 8, 6, 0.64)),
-    var(--login-background);
-}
-
-body {
   min-height: 100vh;
-  min-height: 100svh;
-  background-color: transparent;
+  background:
+    radial-gradient(circle at top left, rgba(201, 166, 70, 0.16), transparent 28rem),
+    radial-gradient(circle at bottom right, rgba(37, 91, 62, 0.18), transparent 30rem),
+    linear-gradient(135deg, #030706 0%, var(--bg) 58%, #12150f 100%);
   color: var(--text);
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
-
-.page-background {
-  position: fixed;
-  inset:
-    calc(-1 * env(safe-area-inset-top))
-    0
-    calc(-1 * env(safe-area-inset-bottom))
-    0;
-  width: 100vw;
-  min-height: 100vh;
-  min-height: 100svh;
-  min-height: 100lvh;
-  z-index: 0;
-  pointer-events: none;
-  background-color: #03110c;
-  background-image: var(--active-page-background);
-  background-size: cover;
-  background-position: center top;
-  background-repeat: no-repeat;
 }
 
 button, input, select, textarea { font: inherit; }
@@ -76,16 +31,10 @@ button { border: 0; }
 .loading-shell {
   position: fixed;
   inset: 0;
-  width: 100%;
-  min-height: 100svh;
   z-index: 1000;
   display: grid;
   place-items: center;
-  padding:
-    max(24px, env(safe-area-inset-top))
-    max(24px, env(safe-area-inset-right))
-    max(24px, env(safe-area-inset-bottom))
-    max(24px, env(safe-area-inset-left));
+  padding: 24px;
   background:
     radial-gradient(circle at center, rgba(37, 91, 62, 0.2), transparent 24rem),
     var(--bg);
@@ -120,19 +69,13 @@ button { border: 0; }
 }
 
 .auth-shell, .app-shell {
-  position: relative;
-  z-index: 1;
   width: min(100%, 560px);
   margin: 0 auto;
-  min-height: 100svh;
-  padding:
-    max(24px, env(safe-area-inset-top))
-    max(18px, env(safe-area-inset-right))
-    max(24px, env(safe-area-inset-bottom))
-    max(18px, env(safe-area-inset-left));
+  padding: 18px;
 }
 
 .auth-shell {
+  min-height: 100vh;
   display: grid;
   align-items: center;
 }
@@ -142,29 +85,12 @@ button { border: 0; }
   gap: 16px;
 }
 
-@supports (min-height: 100dvh) {
-  body,
-  .loading-shell,
-  .auth-shell,
-  .app-shell {
-    min-height: 100dvh;
-  }
-
-}
-
 .auth-panel, .hero-card, .panel, .quick-actions {
   border: 1px solid var(--line);
   border-radius: 24px;
-  background: linear-gradient(180deg, rgba(19, 29, 23, 0.9), rgba(10, 18, 14, 0.86));
+  background: linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.018));
   box-shadow: var(--shadow);
-  backdrop-filter: blur(6px);
-}
-
-.auth-panel {
-  position: relative;
-  z-index: 1;
-  background: rgba(10, 18, 14, 0.86);
-  backdrop-filter: blur(4px);
+  backdrop-filter: blur(10px);
 }
 
 .auth-panel, .hero-card { padding: 22px; }
@@ -209,23 +135,14 @@ h2 {
 }
 
 .hero-card {
-  min-height: 250px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   gap: 28px;
-  overflow: hidden;
-  background-image:
-    linear-gradient(90deg, rgba(3, 8, 6, 0.92) 0%, rgba(3, 8, 6, 0.68) 58%, rgba(3, 8, 6, 0.5) 100%),
-    var(--header-background);
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
 }
 
 .hero-card h1 {
   max-width: 760px;
-  text-shadow: 0 2px 18px rgba(0, 0, 0, 0.72);
 }
 
 .hero-actions {
@@ -244,10 +161,9 @@ h2 {
 }
 
 .user-greeting {
-  color: var(--text);
+  color: var(--muted);
   font-size: 0.86rem;
   font-weight: 800;
-  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.82);
 }
 
 .quick-actions {
@@ -794,40 +710,13 @@ button:disabled {
 @media (min-width: 720px) {
   .auth-shell, .app-shell {
     width: min(100%, 960px);
-    padding:
-      max(28px, env(safe-area-inset-top))
-      max(28px, env(safe-area-inset-right))
-      max(28px, env(safe-area-inset-bottom))
-      max(28px, env(safe-area-inset-left));
+    padding: 28px;
   }
 
   .app-shell { grid-template-columns: 1fr 1fr; }
   .auth-panel { width: min(100%, 520px); margin: 0 auto; }
   .hero-card, .quick-actions { grid-column: span 2; }
   .two-column, .action-grid, .detail-grid, .result-actions { grid-template-columns: 1fr 1fr; }
-}
-
-@media (max-width: 600px) {
-  :root {
-    --header-background: url("../assets/images/bg-header-mobile.webp");
-    --login-background: url("../assets/images/background-jlr-mobile.webp");
-  }
-
-  .hero-card { min-height: 280px; }
-}
-
-@media (min-width: 601px) and (max-width: 1024px) {
-  :root {
-    --header-background: url("../assets/images/bg-header-tablet.webp");
-    --login-background: url("../assets/images/background-jlr-tablet.webp");
-  }
-}
-
-@media (min-width: 1025px) and (max-width: 1920px) {
-  :root {
-    --header-background: url("../assets/images/bg-header-laptop.webp");
-    --login-background: url("../assets/images/background-jlr-laptop.webp");
-  }
 }
 
 /* v3 additions */
