@@ -2,6 +2,11 @@
   --bg: #07110d;
   --header-background: url("../assets/images/bg-header-desktop.webp");
   --login-background: url("../assets/images/background-jlr-desktop.webp");
+  --app-page-background:
+    radial-gradient(circle at top left, rgba(201, 166, 70, 0.16), transparent 28rem),
+    radial-gradient(circle at bottom right, rgba(37, 91, 62, 0.18), transparent 30rem),
+    linear-gradient(135deg, #030706 0%, var(--bg) 58%, #12150f 100%);
+  --active-page-background: var(--app-page-background);
   --panel: #101b15;
   --line: rgba(244, 241, 232, 0.13);
   --text: #f4f1e8;
@@ -21,40 +26,45 @@ body {
   margin: 0;
   min-height: 100%;
   overflow-x: hidden;
-  background-color: var(--bg);
+  background-color: #03110c;
+}
+
+html {
+  background-image: var(--active-page-background);
+  background-size: cover;
+  background-position: center top;
+  background-repeat: no-repeat;
+}
+
+.login-background {
+  --active-page-background:
+    linear-gradient(rgba(3, 8, 6, 0.46), rgba(3, 8, 6, 0.64)),
+    var(--login-background);
 }
 
 body {
-  position: relative;
-  isolation: isolate;
   min-height: 100svh;
-  background-color: var(--bg);
   color: var(--text);
   font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 .page-background {
   position: fixed;
-  inset: 0;
+  top: calc(-1 * env(safe-area-inset-top));
+  right: 0;
+  bottom: auto;
+  left: 0;
   width: 100vw;
-  height: 100svh;
-  min-height: 100svh;
-  z-index: -1;
+  height: calc(100vh + env(safe-area-inset-top) + env(safe-area-inset-bottom));
+  height: calc(100svh + env(safe-area-inset-top) + env(safe-area-inset-bottom));
+  min-height: calc(100svh + env(safe-area-inset-top) + env(safe-area-inset-bottom));
+  z-index: 0;
   pointer-events: none;
-  background-color: var(--bg);
-  background-image:
-    radial-gradient(circle at top left, rgba(201, 166, 70, 0.16), transparent 28rem),
-    radial-gradient(circle at bottom right, rgba(37, 91, 62, 0.18), transparent 30rem),
-    linear-gradient(135deg, #030706 0%, var(--bg) 58%, #12150f 100%);
+  background-color: #03110c;
+  background-image: var(--active-page-background);
   background-size: cover;
-  background-position: center;
+  background-position: center top;
   background-repeat: no-repeat;
-}
-
-body.login-background .page-background {
-  background-image:
-    linear-gradient(rgba(3, 8, 6, 0.46), rgba(3, 8, 6, 0.64)),
-    var(--login-background);
 }
 
 button, input, select, textarea { font: inherit; }
@@ -107,6 +117,8 @@ button { border: 0; }
 }
 
 .auth-shell, .app-shell {
+  position: relative;
+  z-index: 1;
   width: min(100%, 560px);
   margin: 0 auto;
   min-height: 100svh;
@@ -118,8 +130,6 @@ button { border: 0; }
 }
 
 .auth-shell {
-  position: relative;
-  isolation: isolate;
   display: grid;
   align-items: center;
 }
@@ -137,7 +147,9 @@ button { border: 0; }
     min-height: 100dvh;
   }
 
-  .page-background { height: 100dvh; }
+  .page-background {
+    height: calc(100dvh + env(safe-area-inset-top) + env(safe-area-inset-bottom));
+  }
 }
 
 .auth-panel, .hero-card, .panel, .quick-actions {
