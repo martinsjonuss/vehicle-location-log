@@ -214,21 +214,6 @@ h2 {
   text-shadow: 0 2px 18px rgba(0, 0, 0, 0.72);
 }
 
-.hero-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
-  align-items: center;
-  flex-wrap: wrap;
-}
-
-.user-actions {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
-}
-
 .profile-menu-button {
   position: absolute;
   top: 22px;
@@ -1068,7 +1053,9 @@ body.drawer-open {
 }
 
 .profile-drawer-item {
+  width: 100%;
   min-height: 58px;
+  padding: 0 4px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1076,6 +1063,27 @@ body.drawer-open {
   border-bottom: 1px solid var(--line);
   color: var(--text);
   font-weight: 750;
+}
+
+button.profile-drawer-item {
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: background 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.profile-drawer-signout {
+  border-bottom-color: transparent;
+  color: #ffd8d4;
+}
+
+.profile-drawer-signout:hover,
+.profile-drawer-signout:focus-visible {
+  border-bottom-color: rgba(190, 87, 78, 0.42);
+  background: rgba(190, 87, 78, 0.14);
+  color: #ffe6e2;
+  outline: none;
 }
 
 .drawer-item-status {
