@@ -43,10 +43,12 @@
 
   <main id="appShell" class="app-shell hidden">
     <section class="hero-card">
+      <button id="profileMenuBtn" class="profile-menu-button" type="button" aria-label="Open account menu" aria-controls="profileDrawer" aria-expanded="false">
+        <span id="profileInitials" class="profile-initials" aria-hidden="true">?</span>
+      </button>
       <h1>Track Vehicle Movements and Locations</h1>
       <div class="hero-actions">
         <div class="user-actions">
-          <span id="userGreeting" class="user-greeting"></span>
           <button id="signOutBtn" class="ghost-button">Sign Out</button>
         </div>
       </div>
@@ -213,6 +215,35 @@
       <div id="activityList" class="history-list"></div>
     </section>
   </main>
+
+  <div id="profileDrawerOverlay" class="profile-drawer-overlay" aria-hidden="true"></div>
+  <aside id="profileDrawer" class="profile-drawer" role="dialog" aria-modal="true" aria-labelledby="profileDrawerTitle" aria-hidden="true" inert>
+    <div class="profile-drawer-header">
+      <div class="profile-summary">
+        <span class="profile-avatar" aria-hidden="true"><span id="drawerProfileInitials" class="profile-initials">?</span></span>
+        <div>
+          <p class="eyebrow">Account</p>
+          <h2 id="profileDrawerTitle">Unknown User</h2>
+        </div>
+      </div>
+      <button id="profileDrawerClose" class="profile-drawer-close" type="button" aria-label="Close account menu">&times;</button>
+    </div>
+
+    <div class="profile-drawer-items" aria-label="Account menu">
+      <div class="profile-drawer-item">
+        <span>Car park audit / scan</span>
+        <span class="drawer-item-status">Coming soon</span>
+      </div>
+      <div class="profile-drawer-item">
+        <span>Help</span>
+        <span class="drawer-item-status">Coming soon</span>
+      </div>
+      <div class="profile-drawer-item">
+        <span>Settings &amp; profile</span>
+        <span class="drawer-item-status">Coming soon</span>
+      </div>
+    </div>
+  </aside>
 
   <dialog id="parkingMapModal" class="parking-map-modal" aria-labelledby="parkingMapTitle">
     <div class="parking-map-dialog">
