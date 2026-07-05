@@ -13,6 +13,8 @@ const profileDrawerOverlay = document.getElementById("profileDrawerOverlay");
 const profileDrawerClose = document.getElementById("profileDrawerClose");
 const profileDrawerTitle = document.getElementById("profileDrawerTitle");
 const drawerProfileInitials = document.getElementById("drawerProfileInitials");
+const themeToggle = document.getElementById("themeToggle");
+const themeColorMeta = document.getElementById("themeColorMeta");
 
 const checkInTab = document.getElementById("checkInTab");
 const findTab = document.getElementById("findTab");
@@ -54,6 +56,7 @@ const GPS_PREFERENCE_KEY = "vehicleLocationLogGpsEnabled";
 const PARKING_MAP_BUCKET = "parking-maps";
 const PARKING_MAP_FILE = "compound-map.png";
 const PARKING_MAP_URL_LIFETIME_SECONDS = 60;
+const THEME_PREFERENCE_KEY = "vehicleLocationLogTheme";
 const MAX_MILEAGE_DIGITS = 7;
 const MAX_REGISTRATION_CHARS = 15;
 const SEARCH_RESULTS_PER_PAGE = 5;
@@ -65,8 +68,47 @@ let currentUserProfile = null;
 let currentAuthUser = null;
 let initialAuthResolved = false;
 
+function setTheme(theme, persist = true) {
+  const nextTheme = theme === "dark" ? "dark" : "light";
+  document.documentElement.dataset.theme = nextTheme;
+  themeToggle.checked = nextTheme === "dark";
+  themeColorMeta.content = nextTheme === "dark" ? "#0d141d" : "#f4f7fb";
+  if (persist) localStorage.setItem(THEME_PREFERENCE_KEY, nextTheme);
+}
+
+function initialiseTheme() {
+  const savedTheme = localStorage.getItem(THEME_PREFERENCE_KEY);
+  const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+  setTheme(savedTheme === "light" || savedTheme === "dark" ? savedTheme : systemTheme, false);
+}
+
 function normaliseReg(value) {
   return value.trim().toUpperCase().replace(/\s+/g, "").slice(0, MAX_REGISTRATION_CHARS);
+}
+
+function formatRegistration(value) {
+  const original = String(value || "").trim().toUpperCase();
+  const compact = original.replace(/[\s-]+/g, "");
+
+  const irish = compact.match(/^(\d{2,3})([A-Z]{1,2})(\d{1,6})$/);
+  if (irish) return `${irish[1]}-${irish[2]}-${irish[3]}`;
+
+  const ukCurrent = compact.match(/^([A-Z]{2}\d{2})([A-Z]{3})$/);
+  if (ukCurrent) return `${ukCurrent[1]} ${ukCurrent[2]}`;
+
+  const ukPrefix = compact.match(/^([A-Z]\d{1,3})([A-Z]{3})$/);
+  if (ukPrefix) return `${ukPrefix[1]} ${ukPrefix[2]}`;
+
+  const ukSuffix = compact.match(/^([A-Z]{3})(\d{1,3}[A-Z])$/);
+  if (ukSuffix) return `${ukSuffix[1]} ${ukSuffix[2]}`;
+
+  const lettersFirst = compact.match(/^([A-Z]{1,3})(\d{1,4})$/);
+  if (lettersFirst) return `${lettersFirst[1]} ${lettersFirst[2]}`;
+
+  const numbersFirst = compact.match(/^(\d{1,4})([A-Z]{1,3})$/);
+  if (numbersFirst) return `${numbersFirst[1]} ${numbersFirst[2]}`;
+
+  return original;
 }
 
 function formatMileage(value) {
@@ -167,7 +209,6 @@ function closeProfileDrawer(restoreFocus = true) {
 
 function showLoading() {
   closeProfileDrawer(false);
-  document.body.classList.remove("login-background");
   loadingScreen.classList.remove("hidden");
   loginScreen.classList.add("hidden");
   appShell.classList.add("hidden");
@@ -175,7 +216,6 @@ function showLoading() {
 
 function showLogin(message) {
   closeParkingMap();
-  document.body.classList.add("login-background");
   loadingScreen.classList.add("hidden");
   loginScreen.classList.remove("hidden");
   appShell.classList.add("hidden");
@@ -243,7 +283,6 @@ async function openParkingMap() {
 }
 
 async function showApp() {
-  document.body.classList.remove("login-background");
   loginScreen.classList.add("hidden");
   appShell.classList.remove("hidden");
   loginMessage.textContent = "";
@@ -561,6 +600,13 @@ function prepareVehicleCheckIn(record) {
   checkInReg.focus({ preventScroll: true });
 }
 
+function setUpdateTitle(registration) {
+  const plate = document.createElement("span");
+  plate.className = "registration-plate update-registration-plate";
+  plate.textContent = formatRegistration(registration);
+  updateTitle.replaceChildren(document.createTextNode("Update "), plate);
+}
+
 async function renderVehicleResult(recordOrReg) {
   const record = typeof recordOrReg === "string" ? await getLatestRecord(recordOrReg) : recordOrReg;
 
@@ -577,7 +623,7 @@ async function renderVehicleResult(recordOrReg) {
   vehicleResult.className = "vehicle-result";
   vehicleResult.innerHTML = `
     <div class="result-top">
-      <div class="reg-large">${record.reg}</div>
+      <div class="reg-large registration-plate">${formatRegistration(record.reg)}</div>
       <span class="history-time">${formatTime(record.createdAt)}</span>
     </div>
 
@@ -688,7 +734,7 @@ function renderSearchResultsPage() {
         return `
           <article class="history-card search-result-card" data-reg="${record.reg}">
             <div class="history-top">
-              <span class="history-reg">${record.reg}</span>
+              <span class="history-reg registration-plate">${formatRegistration(record.reg)}</span>
               <span class="history-time">${formatTime(record.createdAt)}</span>
             </div>
             ${record.status === "IN" ? `<p class="activity-parked"><span>Parked:</span> ${record.parkingLocation || "Not specified"}</p>` : ""}
@@ -738,7 +784,7 @@ async function openUpdatePanel(reg) {
   updateParking.value = "";
   updateNote.value = "";
   updateStage.value = "Parked";
-  updateTitle.textContent = `Update ${latest.reg}`;
+  setUpdateTitle(latest.reg);
   updatePanel.classList.remove("hidden");
   updatePanel.scrollIntoView({ behavior: "smooth", block: "start" });
 }
@@ -759,7 +805,7 @@ async function toggleVehicleHistory(reg) {
   panel.innerHTML = history.map(record => `
     <article class="history-card">
       <div class="history-top">
-        <span class="history-reg">${record.stage}</span>
+        <span class="history-stage">${record.stage}</span>
         <span class="history-time">${formatTime(record.createdAt)}</span>
       </div>
       <p class="history-note">${movementLine(record)}</p>
@@ -807,7 +853,7 @@ async function renderActivity() {
     return `
       <article class="history-card" data-reg="${record.reg}">
         <div class="history-top">
-          <span class="history-reg">${record.reg}</span>
+          <span class="history-reg registration-plate">${formatRegistration(record.reg)}</span>
           <span class="history-time">${formatTime(record.createdAt)}</span>
         </div>
         <p class="activity-parked"><span>Parked:</span> ${record.parkingLocation || "Not specified"}</p>
@@ -958,6 +1004,7 @@ cancelUpdateBtn.addEventListener("click", () => {
 
 checkInGpsEnabled.addEventListener("change", () => setGpsEnabled(checkInGpsEnabled.checked));
 updateGpsEnabled.addEventListener("change", () => setGpsEnabled(updateGpsEnabled.checked));
+themeToggle.addEventListener("change", () => setTheme(themeToggle.checked ? "dark" : "light"));
 
 loginForm.addEventListener("submit", async event => {
   event.preventDefault();
@@ -1059,5 +1106,6 @@ async function initialiseAuth() {
   }
 }
 
+initialiseTheme();
 initialiseGpsPreference();
 initialiseAuth();
