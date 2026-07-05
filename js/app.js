@@ -5,8 +5,14 @@ const loginForm = document.getElementById("loginForm");
 const loginEmail = document.getElementById("loginEmail");
 const loginPassword = document.getElementById("loginPassword");
 const loginMessage = document.getElementById("loginMessage");
-const userGreeting = document.getElementById("userGreeting");
+const profileMenuBtn = document.getElementById("profileMenuBtn");
+const profileInitials = document.getElementById("profileInitials");
 const signOutBtn = document.getElementById("signOutBtn");
+const profileDrawer = document.getElementById("profileDrawer");
+const profileDrawerOverlay = document.getElementById("profileDrawerOverlay");
+const profileDrawerClose = document.getElementById("profileDrawerClose");
+const profileDrawerTitle = document.getElementById("profileDrawerTitle");
+const drawerProfileInitials = document.getElementById("drawerProfileInitials");
 
 const checkInTab = document.getElementById("checkInTab");
 const findTab = document.getElementById("findTab");
@@ -116,11 +122,51 @@ function profileDisplayName() {
   return currentUserProfile?.first_name || currentAuthUser?.email || "Unknown User";
 }
 
-function updateUserGreeting() {
-  userGreeting.textContent = currentAuthUser ? `Hi, ${profileDisplayName()}` : "";
+function getProfileInitials() {
+  const firstName = String(currentUserProfile?.first_name || "").trim();
+  const lastName = String(currentUserProfile?.last_name || "").trim();
+
+  if (firstName) {
+    return `${firstName.charAt(0)}${lastName.charAt(0)}`.toUpperCase();
+  }
+
+  const email = String(currentAuthUser?.email || "").trim();
+  return email ? email.charAt(0).toUpperCase() : "?";
+}
+
+function updateProfileDisplay() {
+  profileDrawerTitle.textContent = currentAuthUser ? profileDisplayName() : "Unknown User";
+  const initials = getProfileInitials();
+  profileInitials.textContent = initials;
+  drawerProfileInitials.textContent = initials;
+}
+
+function openProfileDrawer() {
+  if (!currentAuthUser) return;
+  profileDrawer.classList.add("open");
+  profileDrawerOverlay.classList.add("open");
+  profileDrawer.removeAttribute("inert");
+  profileDrawer.setAttribute("aria-hidden", "false");
+  profileDrawerOverlay.setAttribute("aria-hidden", "false");
+  profileMenuBtn.setAttribute("aria-expanded", "true");
+  document.body.classList.add("drawer-open");
+  profileDrawerClose.focus();
+}
+
+function closeProfileDrawer(restoreFocus = true) {
+  const wasOpen = profileDrawer.classList.contains("open");
+  profileDrawer.classList.remove("open");
+  profileDrawerOverlay.classList.remove("open");
+  profileDrawer.setAttribute("inert", "");
+  profileDrawer.setAttribute("aria-hidden", "true");
+  profileDrawerOverlay.setAttribute("aria-hidden", "true");
+  profileMenuBtn.setAttribute("aria-expanded", "false");
+  document.body.classList.remove("drawer-open");
+  if (wasOpen && restoreFocus) profileMenuBtn.focus();
 }
 
 function showLoading() {
+  closeProfileDrawer(false);
   document.body.classList.remove("login-background");
   loadingScreen.classList.remove("hidden");
   loginScreen.classList.add("hidden");
@@ -135,7 +181,7 @@ function showLogin(message) {
   appShell.classList.add("hidden");
   updatePanel.classList.add("hidden");
   loginPassword.value = "";
-  userGreeting.textContent = "";
+  updateProfileDisplay();
   if (message !== undefined) {
     loginMessage.textContent = message;
   }
@@ -201,7 +247,7 @@ async function showApp() {
   loginScreen.classList.add("hidden");
   appShell.classList.remove("hidden");
   loginMessage.textContent = "";
-  updateUserGreeting();
+  updateProfileDisplay();
   await renderActivity();
   loadingScreen.classList.add("hidden");
 }
@@ -212,14 +258,14 @@ async function loadCurrentUserProfile(user) {
 
   const { data: profile, error } = await db
     .from("user_profiles")
-    .select("id, first_name, email, is_active")
+    .select("id, first_name, last_name, email, is_active")
     .eq("id", user.id)
     .maybeSingle();
 
   if (error) {
     console.error(error);
     alert("Profile could not be loaded. Using account email.");
-    updateUserGreeting();
+    updateProfileDisplay();
     return true;
   }
 
@@ -229,7 +275,7 @@ async function loadCurrentUserProfile(user) {
   }
 
   currentUserProfile = profile;
-  updateUserGreeting();
+  updateProfileDisplay();
   return true;
 }
 
@@ -479,15 +525,40 @@ async function getPositionForSave({ button, parkingLocation, messageElement }) {
 }
 
 function movementLine(record) {
+  const action = record.action === "Location updated" ? "Updated" : record.action;
   return [
-    `${record.action} by ${record.staff}`,
+    `${action} by ${record.staff || "Unknown user"}`,
     record.status ? `Status: ${record.status}` : "",
     record.stage ? `Current Stage: ${record.stage}` : "",
-    record.parkingLocation ? `Parking: ${record.parkingLocation}` : "",
+    record.parkingLocation ? `Parked: ${record.parkingLocation}` : "",
     hasRecordedMileage(record) ? `Mileage: ${formatMileage(record.mileage)}` : "",
     hasValidAccuracy(record) ? `GPS approx. ${Math.round(record.accuracy)}m` : "",
     record.note ? record.note : ""
   ].filter(Boolean).join(" · ");
+}
+
+function recentActivityDetails(record) {
+  const action = record.action === "Location updated" ? "Updated" : record.action;
+  return [
+    `${action} by ${record.staff || "Unknown user"}`,
+    record.stage ? `Current Stage: ${record.stage}` : "",
+    hasRecordedMileage(record) ? `Mileage: ${formatMileage(record.mileage)}` : "",
+    hasValidAccuracy(record) ? `GPS Accuracy: approx. ${Math.round(record.accuracy)}m` : "",
+    record.note ? `Note: ${record.note}` : ""
+  ].filter(Boolean).join(" · ");
+}
+
+function prepareVehicleCheckIn(record) {
+  switchMainView("checkin");
+  checkInReg.value = record.reg;
+
+  const matchingType = Array.from(checkInType.options)
+    .find(option => option.value === record.vehicleType);
+  if (matchingType) checkInType.value = matchingType.value;
+
+  checkInMessage.textContent = "";
+  checkInView.scrollIntoView({ behavior: "smooth", block: "start" });
+  checkInReg.focus({ preventScroll: true });
 }
 
 async function renderVehicleResult(recordOrReg) {
@@ -506,63 +577,72 @@ async function renderVehicleResult(recordOrReg) {
   vehicleResult.className = "vehicle-result";
   vehicleResult.innerHTML = `
     <div class="result-top">
-      <div>
-        <div class="reg-large">${record.reg}</div>
-        <p class="small-note">${record.vehicleType}</p>
-      </div>
-      <span class="status-pill ${statusClass}">${record.status}</span>
+      <div class="reg-large">${record.reg}</div>
+      <span class="history-time">${formatTime(record.createdAt)}</span>
     </div>
 
-    <div class="detail-grid">
-      <div class="detail-card">
-        <div class="detail-label">Current stage</div>
-        <p class="detail-value">${record.stage}</p>
+    <div class="vehicle-info-list">
+      ${record.status === "IN"
+        ? `<button class="primary-button vehicle-primary-action" type="button" data-action="update-location" data-reg="${record.reg}">Update Location</button>`
+        : `<button class="primary-button vehicle-primary-action" type="button" data-action="check-in" data-reg="${record.reg}">Check In</button>`}
+
+      ${record.status === "IN" ? `
+        <div class="activity-parked vehicle-parked-row">
+          <div class="vehicle-parked-value"><span>Parked:</span> ${record.parkingLocation || "Not specified"}</div>
+          ${hasLocation ? `
+            <div class="vehicle-row-actions">
+              <a class="detail-action-button" href="${mapsUrl(record)}" target="_blank" rel="noopener">Open</a>
+            </div>
+          ` : ""}
+        </div>
+      ` : ""}
+
+      <div class="vehicle-info-row">
+        <span class="vehicle-info-label">Current Stage:</span>
+        <strong>${record.stage || "Not specified"}</strong>
       </div>
-      <div class="detail-card">
-        <div class="detail-label">Last updated</div>
-        <p class="detail-value">${formatTime(record.createdAt)}</p>
+      <div class="vehicle-info-row">
+        <span class="vehicle-info-label">Updated by:</span>
+        <strong>${record.staff || "Unknown user"}</strong>
       </div>
-      <div class="detail-card">
-        <div class="detail-label">Updated by</div>
-        <p class="detail-value">${record.staff}</p>
+      <div class="vehicle-info-row">
+        <span class="vehicle-info-label">Mileage:</span>
+        <strong>${formatMileage(record.mileage)}</strong>
       </div>
-      <div class="detail-card">
-        <div class="detail-label">Mileage</div>
-        <p class="detail-value">${formatMileage(record.mileage)}</p>
+      <div class="vehicle-info-row vehicle-info-action-row">
+        <div>
+          <span class="vehicle-info-label">Movement History:</span>
+          <strong>${history.length} saved movement${history.length === 1 ? "" : "s"}</strong>
+        </div>
+        <button class="detail-action-button" type="button" data-action="toggle-history" data-reg="${record.reg}">View</button>
       </div>
-      <div class="detail-card">
-        <div class="detail-label">Parking location</div>
-        <p class="detail-value">${record.parkingLocation || "Not selected"}</p>
-      </div>
-      <div class="detail-card">
-        <div class="detail-label">GPS accuracy</div>
-        <p class="detail-value">${hasValidAccuracy(record) ? `Approx. ${Math.round(record.accuracy)}m` : "Not available"}</p>
-      </div>
-      <div class="detail-card">
-        <div class="detail-label">Note</div>
-        <p class="detail-value">${record.note || "No note added"}</p>
-      </div>
-      <div class="detail-card">
-        <div class="detail-label">Movement history</div>
-        <p class="detail-value">${history.length} saved movement${history.length === 1 ? "" : "s"}</p>
+      ${hasValidAccuracy(record) ? `
+        <div class="vehicle-info-row">
+          <span class="vehicle-info-label">GPS Accuracy:</span>
+          <strong>Approx. ${Math.round(record.accuracy)}m</strong>
+        </div>
+      ` : ""}
+      <div class="vehicle-note-section">
+        <div class="vehicle-info-label">Note</div>
+        <p class="vehicle-note-block">${record.note || "No note added"}</p>
       </div>
     </div>
 
-    <div class="result-actions">
-      ${hasLocation ? `<a class="maps-button" href="${mapsUrl(record)}" target="_blank" rel="noopener">Open Location</a>` : ""}
-      ${record.status === "IN" ? `<button class="primary-button" data-action="update-location" data-reg="${record.reg}">Update Location</button>` : ""}
-      <button class="primary-button" data-action="toggle-history" data-reg="${record.reg}">View movement history</button>
+    <div class="vehicle-result-footer ${record.status === "OUT" ? "status-only" : ""}">
       ${record.status === "IN" ? `<button class="secondary-button" data-action="mark-out" data-reg="${record.reg}">Mark Out</button>` : ""}
+      <span class="activity-status ${statusClass}">${record.status}</span>
     </div>
 
     <div id="vehicleHistoryPanel" class="vehicle-history hidden"></div>
   `;
 
   const updateButton = vehicleResult.querySelector("[data-action='update-location']");
+  const checkInButton = vehicleResult.querySelector("[data-action='check-in']");
   const markOutButton = vehicleResult.querySelector("[data-action='mark-out']");
   const historyButton = vehicleResult.querySelector("[data-action='toggle-history']");
 
   if (updateButton) updateButton.addEventListener("click", () => openUpdatePanel(record.reg));
+  if (checkInButton) checkInButton.addEventListener("click", () => prepareVehicleCheckIn(record));
   if (markOutButton) markOutButton.addEventListener("click", () => markVehicleOut(record.reg));
   if (historyButton) historyButton.addEventListener("click", () => toggleVehicleHistory(record.reg));
 
@@ -608,20 +688,13 @@ function renderSearchResultsPage() {
         return `
           <article class="history-card search-result-card" data-reg="${record.reg}">
             <div class="history-top">
-              <div>
-                <span class="history-reg">${record.reg}</span>
-                <div class="status-line">
-                  <span class="activity-status ${statusClass}">${record.status}</span>
-                </div>
-              </div>
+              <span class="history-reg">${record.reg}</span>
               <span class="history-time">${formatTime(record.createdAt)}</span>
             </div>
-            <p class="history-note">
-              ${[
-                record.stage,
-                record.parkingLocation ? `Parking: ${record.parkingLocation}` : ""
-              ].filter(Boolean).join(" · ")}
-            </p>
+            ${record.status === "IN" ? `<p class="activity-parked"><span>Parked:</span> ${record.parkingLocation || "Not specified"}</p>` : ""}
+            <div class="activity-footer">
+              <span class="activity-status ${statusClass}">${record.status}</span>
+            </div>
           </article>
         `;
       }).join("")}
@@ -734,15 +807,14 @@ async function renderActivity() {
     return `
       <article class="history-card" data-reg="${record.reg}">
         <div class="history-top">
-          <div>
-            <span class="history-reg">${record.reg}</span>
-            <div class="status-line">
-              <span class="activity-status ${statusClass}">${record.status}</span>
-            </div>
-          </div>
+          <span class="history-reg">${record.reg}</span>
           <span class="history-time">${formatTime(record.createdAt)}</span>
         </div>
-        <p class="history-note">${movementLine(record)}</p>
+        <p class="activity-parked"><span>Parked:</span> ${record.parkingLocation || "Not specified"}</p>
+        <p class="history-note">${recentActivityDetails(record)}</p>
+        <div class="activity-footer">
+          <span class="activity-status ${statusClass}">${record.status}</span>
+        </div>
       </article>
     `;
   }).join("");
@@ -754,6 +826,14 @@ async function renderActivity() {
 
 checkInTab.addEventListener("click", () => switchMainView("checkin"));
 findTab.addEventListener("click", () => switchMainView("find"));
+profileMenuBtn.addEventListener("click", openProfileDrawer);
+profileDrawerClose.addEventListener("click", () => closeProfileDrawer());
+profileDrawerOverlay.addEventListener("click", () => closeProfileDrawer());
+document.addEventListener("keydown", event => {
+  if (event.key === "Escape" && profileDrawer.classList.contains("open")) {
+    closeProfileDrawer();
+  }
+});
 parkingMapButtons.forEach(button => button.addEventListener("click", openParkingMap));
 parkingMapClose.addEventListener("click", closeParkingMap);
 parkingMapModal.addEventListener("click", event => {
