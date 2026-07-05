@@ -3,7 +3,17 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta id="themeColorMeta" name="theme-color" content="#f4f7fb" />
   <title>Vehicle Location Log</title>
+  <script>
+    (() => {
+      const savedTheme = localStorage.getItem("vehicleLocationLogTheme");
+      const theme = savedTheme === "light" || savedTheme === "dark"
+        ? savedTheme
+        : (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.dataset.theme = theme;
+    })();
+  </script>
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
@@ -204,7 +214,7 @@
 
     <section class="panel">
       <div class="section-title">
-        <h2>Recent activity</h2>
+        <h2 class="activity-heading">Recent activity</h2>
       </div>
 
       <div id="activityList" class="history-list"></div>
@@ -236,6 +246,13 @@
       <div class="profile-drawer-item">
         <span>Settings &amp; profile</span>
         <span class="drawer-item-status">Coming soon</span>
+      </div>
+      <div class="profile-drawer-item theme-setting-row">
+        <span>Dark mode</span>
+        <label class="theme-toggle" for="themeToggle">
+          <input id="themeToggle" type="checkbox" aria-label="Use dark mode" />
+          <span class="theme-toggle-track" aria-hidden="true"></span>
+        </label>
       </div>
       <button id="signOutBtn" class="profile-drawer-item profile-drawer-signout" type="button">
         <span>Sign out</span>
