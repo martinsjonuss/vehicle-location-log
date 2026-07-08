@@ -18,7 +18,7 @@ create policy "Allow authenticated insert access"
 on public.vehicle_movements
 for insert
 to authenticated
-with check (auth.uid() = user_id);
+with check (true);
 
 alter table public.user_profiles enable row level security;
 
@@ -32,7 +32,6 @@ alter table public.user_profiles add column if not exists created_at timestamptz
 
 drop policy if exists "Authenticated users can read profiles" on public.user_profiles;
 drop policy if exists "Allow authenticated own profile read access" on public.user_profiles;
-drop policy if exists "Allow authenticated profile display read access" on public.user_profiles;
 
 grant usage on schema public to authenticated;
 grant select on table public.user_profiles to authenticated;
