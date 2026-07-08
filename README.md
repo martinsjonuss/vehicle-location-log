@@ -69,9 +69,9 @@ Marked OUT
 * No public sign-up flow
 * Main app hidden until a valid session exists
 * Sign out returns the user to the login screen
-* Signed-in user profile saved on new movement records through `user_id`
-* Profile first name is shown for activity through the saved `user_id`
-* Older records without a linked profile display as unknown user
+* Signed-in user profile linked on new movement records through `user_id`
+* Signed-in user's first name saved as the movement display name
+* Older records without a display name show as unknown user
 
 ### Vehicle Check In
 
@@ -325,7 +325,7 @@ Potential future enhancements:
 * Hid the main app until a valid session exists
 * Removed manual "Updated by" fields
 * Linked new movement records to the signed-in user's profile with `user_id`
-* Displayed profile first name for activity through linked user profiles
+* Saved the user's first name as the movement display name for activity history
 * Added authenticated-only RLS SQL template
 * Added security documentation
 

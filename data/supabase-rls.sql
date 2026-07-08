@@ -37,8 +37,8 @@ drop policy if exists "Allow authenticated profile display read access" on publi
 grant usage on schema public to authenticated;
 grant select on table public.user_profiles to authenticated;
 
-create policy "Allow authenticated profile display read access"
+create policy "Allow authenticated own profile read access"
 on public.user_profiles
 for select
 to authenticated
-using (true);
+using (auth.uid() = id);

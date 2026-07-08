@@ -60,13 +60,6 @@ const THEME_PREFERENCE_KEY = "vehicleLocationLogTheme";
 const MAX_MILEAGE_DIGITS = 7;
 const MAX_REGISTRATION_CHARS = 15;
 const SEARCH_RESULTS_PER_PAGE = 5;
-const VEHICLE_MOVEMENT_SELECT = `
-  *,
-  user_profiles (
-    first_name,
-    last_name
-  )
-`;
 const searchResultsState = {
   records: [],
   page: 1
@@ -169,6 +162,10 @@ function initialiseGpsPreference() {
 
 function profileDisplayName(profile = currentUserProfile, fallback = currentAuthUser?.email) {
   return profile?.first_name || fallback || "Unknown User";
+}
+
+function movementDisplayName(profile = currentUserProfile, fallback = "Unknown user") {
+  return profile?.first_name || fallback;
 }
 
 function getProfileInitials() {
@@ -325,10 +322,6 @@ async function loadCurrentUserProfile(user) {
   return true;
 }
 
-function recordUserDisplayName(row) {
-  return profileDisplayName(row.user_profiles, "Unknown user");
-}
-
 async function getAuthenticatedMovementProfile() {
   const {
     data: { user },
@@ -389,7 +382,7 @@ function mapDbRecord(row) {
   return {
     id: row.id,
     reg: row.registration,
-    updatedBy: recordUserDisplayName(row),
+    updatedBy: row.staff_name || "Unknown user",
     vehicleType: row.vehicle_type || "Customer vehicle",
     stage: row.stage,
     note: row.note || "",
@@ -413,6 +406,7 @@ function mapRecordForInsert(record) {
     vehicle_type: record.vehicleType,
     mileage: cleanMileage(record.mileage),
     parking_location: record.parkingLocation || null,
+    staff_name: record.updatedBy,
     note: cleanNote(record.note) || null,
     latitude: toNullableNumber(record.lat),
     longitude: toNullableNumber(record.lng),
@@ -429,7 +423,7 @@ function handleDbError(error, fallback) {
 async function getRecords() {
   const { data, error } = await db
     .from("vehicle_movements")
-    .select(VEHICLE_MOVEMENT_SELECT)
+    .select("*")
     .order("created_at", { ascending: false });
 
   if (error) return handleDbError(error, []);
@@ -440,7 +434,7 @@ async function getLatestRecord(reg) {
   const cleaned = normaliseReg(reg);
   const { data, error } = await db
     .from("vehicle_movements")
-    .select(VEHICLE_MOVEMENT_SELECT)
+    .select("*")
     .eq("registration", cleaned)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -454,7 +448,7 @@ async function getVehicleHistory(reg) {
   const cleaned = normaliseReg(reg);
   const { data, error } = await db
     .from("vehicle_movements")
-    .select(VEHICLE_MOVEMENT_SELECT)
+    .select("*")
     .eq("registration", cleaned)
     .order("created_at", { ascending: false });
 
@@ -468,7 +462,7 @@ async function getMatchingLatestRecords(searchTerm) {
 
   const { data, error } = await db
     .from("vehicle_movements")
-    .select(VEHICLE_MOVEMENT_SELECT)
+    .select("*")
     .ilike("registration", `%${cleaned}%`)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -545,7 +539,7 @@ async function addRecord(record) {
   const insertRecord = {
     ...record,
     userId: profile.id,
-    updatedBy: profileDisplayName(profile, currentAuthUser?.email)
+    updatedBy: movementDisplayName(profile)
   };
 
   const { error } = await db
@@ -886,7 +880,7 @@ async function markVehicleOut(reg) {
 async function renderActivity() {
   const { data, error } = await db
     .from("vehicle_movements")
-    .select(VEHICLE_MOVEMENT_SELECT)
+    .select("*")
     .order("created_at", { ascending: false })
     .limit(5);
 
