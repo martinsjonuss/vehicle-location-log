@@ -52,19 +52,19 @@
   </section>
 
   <main id="appShell" class="app-shell hidden">
-    <section class="hero-card">
+    <section class="hero-card home-button" role="button" tabindex="0" aria-label="Go to home">
       <button id="profileMenuBtn" class="profile-menu-button" type="button" aria-label="Open account menu" aria-controls="profileDrawer" aria-expanded="false">
         <span id="profileInitials" class="profile-initials" aria-hidden="true">?</span>
       </button>
       <h1>Track Vehicle Movements and Locations</h1>
     </section>
 
-    <section class="quick-actions">
-      <button id="checkInTab" class="tab-button active">Check In</button>
-      <button id="findTab" class="tab-button">Find Vehicle</button>
+    <section class="quick-actions home-section">
+      <button id="checkInTab" class="tab-button">Check In</button>
+      <button id="findTab" class="tab-button active">Find Vehicle</button>
     </section>
 
-    <section id="checkInView" class="panel">
+    <section id="checkInView" class="panel home-section hidden">
       <div class="panel-heading">
         <p class="eyebrow">Drive-thru host flow</p>
       </div>
@@ -121,7 +121,7 @@
       </form>
     </section>
 
-    <section id="findView" class="panel hidden">
+    <section id="findView" class="panel home-section">
       <div class="panel-heading">
         <p class="eyebrow">Search</p>
       </div>
@@ -136,7 +136,7 @@
       </div>
     </section>
 
-    <section id="updatePanel" class="panel hidden">
+    <section id="updatePanel" class="panel home-section hidden">
       <div class="panel-heading">
         <p class="eyebrow">After moving vehicle</p>
         <h2 id="updateTitle">Update location</h2>
@@ -192,12 +192,28 @@
       </form>
     </section>
 
-    <section class="panel">
+    <section class="panel home-section">
       <div class="section-title">
         <h2 class="activity-heading">Recent activity</h2>
       </div>
 
       <div id="activityList" class="history-list"></div>
+    </section>
+
+    <section id="statsView" class="stats-view hidden" aria-labelledby="statsTitle">
+      <div class="stats-header-card">
+        <div>
+          <p class="eyebrow">My Stats</p>
+          <h2 id="statsTitle">Your vehicle activity overview</h2>
+        </div>
+        <select id="statsPeriod" class="stats-period" aria-label="Stats period">
+          <option value="today" selected>Today</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+        </select>
+      </div>
+
+      <div id="statsContent" class="stats-content" aria-live="polite"></div>
     </section>
   </main>
 
@@ -215,15 +231,21 @@
     </div>
 
     <div class="profile-drawer-items" aria-label="Account menu">
-      <div class="profile-drawer-item">
+      <button id="homeNavBtn" class="profile-drawer-item" type="button">
+        <span>Home</span>
+      </button>
+      <button id="myStatsNavBtn" class="profile-drawer-item" type="button">
+        <span>My Stats</span>
+      </button>
+      <div class="profile-drawer-item profile-drawer-item-disabled">
         <span>Car park audit / scan</span>
         <span class="drawer-item-status">Coming soon</span>
       </div>
-      <div class="profile-drawer-item">
+      <div class="profile-drawer-item profile-drawer-item-disabled">
         <span>Help</span>
         <span class="drawer-item-status">Coming soon</span>
       </div>
-      <div class="profile-drawer-item">
+      <div class="profile-drawer-item profile-drawer-item-disabled">
         <span>Settings &amp; profile</span>
         <span class="drawer-item-status">Coming soon</span>
       </div>

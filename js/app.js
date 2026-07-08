@@ -15,12 +15,19 @@ const profileDrawerTitle = document.getElementById("profileDrawerTitle");
 const drawerProfileInitials = document.getElementById("drawerProfileInitials");
 const themeToggle = document.getElementById("themeToggle");
 const themeColorMeta = document.getElementById("themeColorMeta");
+const heroCard = document.querySelector(".hero-card");
+const homeNavBtn = document.getElementById("homeNavBtn");
+const myStatsNavBtn = document.getElementById("myStatsNavBtn");
 
 const checkInTab = document.getElementById("checkInTab");
 const findTab = document.getElementById("findTab");
 const checkInView = document.getElementById("checkInView");
 const findView = document.getElementById("findView");
 const updatePanel = document.getElementById("updatePanel");
+const statsView = document.getElementById("statsView");
+const statsPeriod = document.getElementById("statsPeriod");
+const statsContent = document.getElementById("statsContent");
+const homeSections = document.querySelectorAll(".home-section");
 
 const checkInForm = document.getElementById("checkInForm");
 const checkInReg = document.getElementById("checkInReg");
@@ -78,9 +85,42 @@ const searchResultsState = {
   records: [],
   page: 1
 };
+const PERIOD_LABELS = {
+  today: "today",
+  week: "this week",
+  month: "this month"
+};
+const STATS_MESSAGES = {
+  empty: [
+    ["Ready when you are.", "Fresh page, fresh tyres. First movement is waiting."],
+    ["Quiet so far.", "No vehicle moves yet, but the day is young."],
+    ["Your stats are warming up.", "Create a movement and this panel springs to life."]
+  ],
+  light: [
+    ["Nice start.", "A tidy bit of movement logged already."],
+    ["You are on the board.", "Small numbers still count when the car is found faster."],
+    ["Good start.", "The logbook is awake and paying attention."]
+  ],
+  steady: [
+    ["Good work.", "You are keeping the vehicle trail clear."],
+    ["Solid rhythm.", "The compound is less mysterious because of you."],
+    ["Nice flow.", "Those updates are doing useful work."]
+  ],
+  busy: [
+    ["Busy shift.", "That is a healthy stack of vehicle movements."],
+    ["Great work.", "You have been keeping the operation moving."],
+    ["Strong pace.", "The vehicle trail is looking sharp."]
+  ],
+  huge: [
+    ["Big day.", "That movement count deserves a proper cup of tea."],
+    ["Excellent shift.", "You have been moving through this list like a pro."],
+    ["Serious output.", "The compound did not know what hit it."]
+  ]
+};
 let currentUserProfile = null;
 let currentAuthUser = null;
 let initialAuthResolved = false;
+let currentPage = "home";
 
 function setTheme(theme, persist = true) {
   const nextTheme = theme === "dark" ? "dark" : "light";
@@ -151,13 +191,108 @@ function formatTime(isoString) {
   });
 }
 
+function escapeHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function startOfDay(date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function addDays(date, days) {
+  const nextDate = new Date(date);
+  nextDate.setDate(nextDate.getDate() + days);
+  return nextDate;
+}
+
+function getStatsRange(period) {
+  const now = new Date();
+  const end = now;
+  let start;
+
+  if (period === "today") {
+    start = startOfDay(now);
+  } else if (period === "month") {
+    start = new Date(now.getFullYear(), now.getMonth(), 1);
+  } else {
+    const today = startOfDay(now);
+    const dayOffset = (today.getDay() + 6) % 7;
+    start = addDays(today, -dayOffset);
+  }
+
+  return { start, end };
+}
+
+function formatStatsDay(date) {
+  return date.toLocaleDateString("en-GB", { weekday: "short", day: "2-digit" });
+}
+
+function formatHourRange(hour) {
+  const start = String(hour).padStart(2, "0");
+  const end = String((hour + 1) % 24).padStart(2, "0");
+  return `${start}:00 - ${end}:00`;
+}
+
+function getMode(records, key) {
+  const counts = new Map();
+  records.forEach(record => {
+    const value = record[key];
+    if (value === null || value === undefined || value === "") return;
+    counts.set(value, (counts.get(value) || 0) + 1);
+  });
+
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])[0] || ["Not recorded", 0];
+}
+
+function isCheckInMovement(record) {
+  return record.stage === "Checked In";
+}
+
+function isMarkedOutMovement(record) {
+  return record.status === "OUT";
+}
+
 function switchMainView(viewName) {
+  revealHomeView();
   const checkInActive = viewName === "checkin";
   checkInView.classList.toggle("hidden", !checkInActive);
   findView.classList.toggle("hidden", checkInActive);
   checkInTab.classList.toggle("active", checkInActive);
   findTab.classList.toggle("active", !checkInActive);
   updatePanel.classList.add("hidden");
+}
+
+function revealHomeView() {
+  currentPage = "home";
+  statsView.classList.add("hidden");
+  homeSections.forEach(section => section.classList.remove("page-hidden"));
+}
+
+function showHomeView() {
+  revealHomeView();
+  closeProfileDrawer(false);
+  switchMainView("find");
+}
+
+function goHome() {
+  showHomeView();
+  appShell.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function showStatsView() {
+  currentPage = "stats";
+  updatePanel.classList.add("hidden");
+  homeSections.forEach(section => section.classList.add("page-hidden"));
+  statsView.classList.remove("hidden");
+  closeProfileDrawer();
+  await renderMyStats();
+  statsView.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function isGpsEnabled() {
@@ -315,6 +450,7 @@ async function showApp() {
   appShell.classList.remove("hidden");
   loginMessage.textContent = "";
   updateProfileDisplay();
+  switchMainView("find");
   await renderActivity();
   loadingScreen.classList.add("hidden");
 }
@@ -581,7 +717,11 @@ async function addRecord(record) {
   }
 
   await renderActivity();
-  await renderVehicleResult(insertRecord.reg);
+  if (currentPage === "stats") {
+    await renderMyStats();
+  } else {
+    await renderVehicleResult(insertRecord.reg);
+  }
 }
 
 function captureGpsPosition() {
@@ -943,9 +1083,261 @@ async function renderActivity() {
   });
 }
 
+async function getStatsUserId() {
+  if (currentAuthUser?.id) return currentAuthUser.id;
+
+  const {
+    data: { user },
+    error
+  } = await db.auth.getUser();
+
+  if (error || !user) {
+    if (error) console.error(error);
+    return null;
+  }
+
+  currentAuthUser = user;
+  return user.id;
+}
+
+function buildActivityByDay(records, range) {
+  const counts = new Map();
+  records.forEach(record => {
+    const date = new Date(record.created_at);
+    const key = startOfDay(date).toISOString();
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+
+  const days = [];
+  let cursor = startOfDay(range.start);
+  const lastDay = startOfDay(range.end);
+
+  while (cursor <= lastDay) {
+    const key = cursor.toISOString();
+    days.push({
+      label: formatStatsDay(cursor),
+      count: counts.get(key) || 0
+    });
+    cursor = addDays(cursor, 1);
+  }
+
+  return days;
+}
+
+function renderStatsBarChart(days) {
+  const maxCount = Math.max(...days.map(day => day.count), 1);
+
+  return `
+    <div class="stats-chart" aria-label="Activity over time">
+      ${days.map(day => `
+        <div class="stats-bar-item">
+          <span class="stats-bar-count">${day.count || ""}</span>
+          <span class="stats-bar-track">
+            <span class="stats-bar-fill" style="height: ${Math.max((day.count / maxCount) * 100, day.count ? 12 : 0)}%"></span>
+          </span>
+          <span class="stats-bar-label">${escapeHtml(day.label)}</span>
+        </div>
+      `).join("")}
+    </div>
+  `;
+}
+
+function renderStatsActivity(records) {
+  if (records.length === 0) {
+    return `<div class="empty-state">No personal activity for this period yet.</div>`;
+  }
+
+  return `
+    <div class="history-list">
+      ${records.slice(0, 5).map(row => {
+        const record = mapDbRecord(row);
+        const statusClass = record.status === "IN" ? "status-in" : "status-out";
+        return `
+          <article class="history-card stats-activity-card" data-reg="${escapeHtml(record.reg)}">
+            <div class="history-top">
+              <span class="history-reg registration-plate">${escapeHtml(formatRegistration(record.reg))}</span>
+              <span class="history-time">${escapeHtml(formatTime(record.createdAt))}</span>
+            </div>
+            ${record.parkingLocation ? `<p class="activity-parked"><span>Parked:</span> ${escapeHtml(record.parkingLocation)}</p>` : ""}
+            <p class="history-note">${escapeHtml(recentActivityDetails(record))}</p>
+            <div class="activity-footer">
+              <span class="activity-status ${statusClass}">${escapeHtml(record.status)}</span>
+            </div>
+          </article>
+        `;
+      }).join("")}
+    </div>
+  `;
+}
+
+function getStatsMessage(total, displayName, periodLabel) {
+  let group = "empty";
+
+  if (total >= 75) {
+    group = "huge";
+  } else if (total >= 25) {
+    group = "busy";
+  } else if (total >= 8) {
+    group = "steady";
+  } else if (total > 0) {
+    group = "light";
+  }
+
+  const messages = STATS_MESSAGES[group];
+  const index = total % messages.length;
+  const [title, body] = messages[index];
+
+  if (total === 0) {
+    return {
+      title,
+      body: `${body} No activity recorded ${periodLabel} yet.`
+    };
+  }
+
+  return {
+    title: `${title} ${displayName}.`,
+    body: `${body} You've logged ${total} vehicle movement${total === 1 ? "" : "s"} ${periodLabel}.`
+  };
+}
+
+async function renderMyStats() {
+  const userId = await getStatsUserId();
+
+  if (!userId) {
+    statsContent.innerHTML = `<div class="empty-state">Sign in to view your stats.</div>`;
+    return;
+  }
+
+  const period = statsPeriod.value || "today";
+  const range = getStatsRange(period);
+  statsContent.innerHTML = `<div class="empty-state">Loading your stats...</div>`;
+
+  const { data, error } = await db
+    .from("vehicle_movements")
+    .select("id, registration, status, stage, parking_location, mileage, accuracy, note, staff_name, created_at")
+    .eq("user_id", userId)
+    .gte("created_at", range.start.toISOString())
+    .lte("created_at", range.end.toISOString())
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error(error);
+    statsContent.innerHTML = `<div class="empty-state">Your stats could not be loaded. Please try again.</div>`;
+    return;
+  }
+
+  const records = data || [];
+  const total = records.length;
+  const checkedIn = records.filter(isCheckInMovement).length;
+  const markedOut = records.filter(isMarkedOutMovement).length;
+  const updates = records.filter(record => !isCheckInMovement(record) && !isMarkedOutMovement(record)).length;
+  const activeVehicles = new Set(records.filter(record => record.status === "IN").map(record => record.registration)).size;
+  const [topLocation, topLocationCount] = getMode(records, "parking_location");
+  const [topHour, topHourCount] = getMode(
+    records.map(record => ({ hour: new Date(record.created_at).getHours() })),
+    "hour"
+  );
+  const days = buildActivityByDay(records, range);
+  const activeDays = days.filter(day => day.count > 0).length;
+  const bestDay = days.slice().sort((a, b) => b.count - a.count)[0];
+  const periodLabel = PERIOD_LABELS[period] || "this period";
+  const displayName = currentUserProfile?.first_name || "there";
+  const statsMessage = getStatsMessage(total, displayName, periodLabel);
+
+  statsContent.innerHTML = `
+    <div class="stats-performance-card">
+      <div>
+        <span class="stats-total">${total}</span>
+        <p>Total movements ${periodLabel}</p>
+      </div>
+      <div>
+        <h3>${escapeHtml(statsMessage.title)}</h3>
+        <p>${escapeHtml(statsMessage.body)}</p>
+      </div>
+    </div>
+
+    <div class="stats-grid">
+      <article class="stat-card">
+        <span>Checked in</span>
+        <strong>${checkedIn}</strong>
+      </article>
+      <article class="stat-card">
+        <span>Location updates</span>
+        <strong>${updates}</strong>
+      </article>
+      <article class="stat-card">
+        <span>Marked OUT</span>
+        <strong>${markedOut}</strong>
+      </article>
+      <article class="stat-card">
+        <span>Active vehicles handled</span>
+        <strong>${activeVehicles}</strong>
+      </article>
+      <article class="stat-card stat-card-wide">
+        <span>Most used location</span>
+        <strong>${escapeHtml(topLocation)}</strong>
+        <small>${topLocationCount} movement${topLocationCount === 1 ? "" : "s"}</small>
+      </article>
+      <article class="stat-card stat-card-wide">
+        <span>Most active time</span>
+        <strong>${topHourCount ? formatHourRange(Number(topHour)) : "Not recorded"}</strong>
+        <small>${topHourCount} movement${topHourCount === 1 ? "" : "s"}</small>
+      </article>
+    </div>
+
+    <section class="stats-panel">
+      <div class="section-title">
+        <h2>Activity over time</h2>
+      </div>
+      ${renderStatsBarChart(days)}
+    </section>
+
+    <div class="stats-grid stats-feedback-grid">
+      <article class="stat-card stat-card-wide">
+        <span>Active days</span>
+        <strong>${activeDays}</strong>
+        <small>${periodLabel}</small>
+      </article>
+      <article class="stat-card stat-card-wide">
+        <span>Best day</span>
+        <strong>${escapeHtml(bestDay?.label || "Not recorded")}</strong>
+        <small>${bestDay?.count || 0} movement${bestDay?.count === 1 ? "" : "s"}</small>
+      </article>
+    </div>
+
+    <section class="stats-panel">
+      <div class="section-title">
+        <h2>Recent personal activity</h2>
+      </div>
+      ${renderStatsActivity(records)}
+    </section>
+  `;
+
+  statsContent.querySelectorAll(".stats-activity-card").forEach(card => {
+    card.addEventListener("click", () => renderVehicleResult(card.dataset.reg));
+  });
+}
+
 checkInTab.addEventListener("click", () => switchMainView("checkin"));
 findTab.addEventListener("click", () => switchMainView("find"));
-profileMenuBtn.addEventListener("click", openProfileDrawer);
+homeNavBtn.addEventListener("click", goHome);
+myStatsNavBtn.addEventListener("click", () => {
+  showStatsView().catch(error => {
+    console.error(error);
+    statsContent.innerHTML = `<div class="empty-state">Your stats could not be loaded. Please try again.</div>`;
+  });
+});
+heroCard.addEventListener("click", goHome);
+heroCard.addEventListener("keydown", event => {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    goHome();
+  }
+});
+profileMenuBtn.addEventListener("click", event => {
+  event.stopPropagation();
+  openProfileDrawer();
+});
 profileDrawerClose.addEventListener("click", () => closeProfileDrawer());
 profileDrawerOverlay.addEventListener("click", () => closeProfileDrawer());
 document.addEventListener("keydown", event => {
@@ -1078,6 +1470,12 @@ cancelUpdateBtn.addEventListener("click", () => {
 checkInGpsEnabled.addEventListener("change", () => setGpsEnabled(checkInGpsEnabled.checked));
 updateGpsEnabled.addEventListener("change", () => setGpsEnabled(updateGpsEnabled.checked));
 themeToggle.addEventListener("change", () => setTheme(themeToggle.checked ? "dark" : "light"));
+statsPeriod.addEventListener("change", () => {
+  renderMyStats().catch(error => {
+    console.error(error);
+    statsContent.innerHTML = `<div class="empty-state">Your stats could not be loaded. Please try again.</div>`;
+  });
+});
 
 loginForm.addEventListener("submit", async event => {
   event.preventDefault();
