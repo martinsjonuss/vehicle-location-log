@@ -322,6 +322,50 @@ function getCurrentStaffName() {
   return currentUserProfile?.first_name || currentAuthUser?.email || "Unknown User";
 }
 
+async function getAuthenticatedMovementProfile() {
+  const {
+    data: { user },
+    error: userError
+  } = await db.auth.getUser();
+
+  if (userError || !user) {
+    if (userError) console.error(userError);
+    showLogin();
+    alert("Please sign in before saving vehicle records.");
+    return null;
+  }
+
+  const { data: profile, error: profileError } = await db
+    .from("user_profiles")
+    .select("id, first_name, email, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    console.error(profileError);
+    alert("Your profile could not be loaded. Vehicle record was not saved.");
+    return null;
+  }
+
+  if (!profile) {
+    alert("Your user profile is missing. Vehicle record was not saved.");
+    return null;
+  }
+
+  if (profile.is_active === false) {
+    await db.auth.signOut();
+    currentAuthUser = null;
+    currentUserProfile = null;
+    showLogin("Your account is inactive. Please contact an administrator.");
+    return null;
+  }
+
+  currentAuthUser = user;
+  currentUserProfile = profile;
+  updateProfileDisplay();
+  return profile;
+}
+
 function actionFromRecord(record) {
   if (record.status === "OUT") return "Marked out";
   if (record.stage === "Checked In") return "Checked in";
@@ -356,6 +400,7 @@ function mapDbRecord(row) {
 function mapRecordForInsert(record) {
   return {
     registration: record.reg,
+    user_id: record.userId,
     status: record.status,
     stage: record.stage,
     vehicle_type: record.vehicleType,
@@ -467,10 +512,11 @@ function showFormMessage(messageElement, message) {
   alert(message);
 }
 
-function buildRecord({ reg, staff, vehicleType, stage, note, status, action, position, mileage, parkingLocation }) {
+function buildRecord({ reg, userId, staff, vehicleType, stage, note, status, action, position, mileage, parkingLocation }) {
   return {
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
     reg: normaliseReg(reg),
+    userId: userId || null,
     staff: staff.trim() || "Demo User",
     vehicleType: vehicleType || "Customer vehicle",
     stage,
@@ -487,19 +533,18 @@ function buildRecord({ reg, staff, vehicleType, stage, note, status, action, pos
 }
 
 async function addRecord(record) {
-  const {
-    data: { session }
-  } = await db.auth.getSession();
+  const profile = await getAuthenticatedMovementProfile();
+  if (!profile?.id) return;
 
-  if (!session) {
-    showLogin();
-    alert("Please sign in before saving vehicle records.");
-    return;
-  }
+  const insertRecord = {
+    ...record,
+    userId: profile.id,
+    staff: profile.first_name || profile.email || record.staff || "Unknown User"
+  };
 
   const { error } = await db
     .from("vehicle_movements")
-    .insert(mapRecordForInsert(record));
+    .insert(mapRecordForInsert(insertRecord));
 
   if (error) {
     console.error(error);
@@ -508,7 +553,7 @@ async function addRecord(record) {
   }
 
   await renderActivity();
-  await renderVehicleResult(record.reg);
+  await renderVehicleResult(insertRecord.reg);
 }
 
 function captureGpsPosition() {
