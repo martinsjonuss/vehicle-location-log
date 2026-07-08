@@ -60,6 +60,20 @@ const THEME_PREFERENCE_KEY = "vehicleLocationLogTheme";
 const MAX_MILEAGE_DIGITS = 7;
 const MAX_REGISTRATION_CHARS = 15;
 const SEARCH_RESULTS_PER_PAGE = 5;
+const PARKING_LOCATIONS = [
+  "Drive Thru",
+  "Budget",
+  "Sales",
+  "S1",
+  "S2",
+  "S3",
+  "S4",
+  "S7",
+  "Customer Car Park",
+  "Fruit Market",
+  "Breakdown Hill",
+  "Other"
+];
 const searchResultsState = {
   records: [],
   page: 1
@@ -158,6 +172,20 @@ function setGpsEnabled(enabled) {
 
 function initialiseGpsPreference() {
   setGpsEnabled(isGpsEnabled());
+}
+
+function populateParkingLocations() {
+  [checkInParking, updateParking].forEach(select => {
+    const placeholder = select.querySelector("option[value='']");
+    select.replaceChildren(placeholder);
+
+    PARKING_LOCATIONS.forEach(location => {
+      const option = document.createElement("option");
+      option.value = location;
+      option.textContent = location;
+      select.appendChild(option);
+    });
+  });
 }
 
 function profileDisplayName() {
@@ -1152,5 +1180,6 @@ async function initialiseAuth() {
 }
 
 initialiseTheme();
+populateParkingLocations();
 initialiseGpsPreference();
 initialiseAuth();
