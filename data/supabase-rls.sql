@@ -1,5 +1,7 @@
 alter table public.vehicle_movements enable row level security;
 
+alter table public.vehicle_movements add column if not exists user_id uuid references public.user_profiles(id);
+
 drop policy if exists "Allow read access" on public.vehicle_movements;
 drop policy if exists "Allow insert access" on public.vehicle_movements;
 drop policy if exists "Allow authenticated read access" on public.vehicle_movements;
@@ -18,7 +20,7 @@ create policy "Allow authenticated insert access"
 on public.vehicle_movements
 for insert
 to authenticated
-with check (true);
+with check (auth.uid() = user_id);
 
 alter table public.user_profiles enable row level security;
 
