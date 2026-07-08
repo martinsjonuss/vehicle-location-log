@@ -60,6 +60,13 @@ const THEME_PREFERENCE_KEY = "vehicleLocationLogTheme";
 const MAX_MILEAGE_DIGITS = 7;
 const MAX_REGISTRATION_CHARS = 15;
 const SEARCH_RESULTS_PER_PAGE = 5;
+const VEHICLE_MOVEMENT_SELECT = `
+  *,
+  user_profiles (
+    first_name,
+    last_name
+  )
+`;
 const searchResultsState = {
   records: [],
   page: 1
@@ -160,8 +167,8 @@ function initialiseGpsPreference() {
   setGpsEnabled(isGpsEnabled());
 }
 
-function profileDisplayName() {
-  return currentUserProfile?.first_name || currentAuthUser?.email || "Unknown User";
+function profileDisplayName(profile = currentUserProfile, fallback = currentAuthUser?.email) {
+  return profile?.first_name || fallback || "Unknown User";
 }
 
 function getProfileInitials() {
@@ -318,8 +325,52 @@ async function loadCurrentUserProfile(user) {
   return true;
 }
 
-function getCurrentStaffName() {
-  return currentUserProfile?.first_name || currentAuthUser?.email || "Unknown User";
+function recordUserDisplayName(row) {
+  return profileDisplayName(row.user_profiles, "Unknown user");
+}
+
+async function getAuthenticatedMovementProfile() {
+  const {
+    data: { user },
+    error: userError
+  } = await db.auth.getUser();
+
+  if (userError || !user) {
+    if (userError) console.error(userError);
+    alert("Please sign in before saving vehicle records.");
+    showLogin();
+    return null;
+  }
+
+  const { data: profile, error: profileError } = await db
+    .from("user_profiles")
+    .select("id, first_name, last_name, email, is_active")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    console.error(profileError);
+    alert("Your profile could not be loaded. Vehicle record was not saved.");
+    return null;
+  }
+
+  if (!profile) {
+    alert("Your user profile is missing. Vehicle record was not saved.");
+    return null;
+  }
+
+  if (profile.is_active === false) {
+    await db.auth.signOut();
+    currentAuthUser = null;
+    currentUserProfile = null;
+    showLogin("Your account is inactive. Please contact an administrator.");
+    return null;
+  }
+
+  currentAuthUser = user;
+  currentUserProfile = profile;
+  updateProfileDisplay();
+  return profile;
 }
 
 function actionFromRecord(record) {
@@ -338,7 +389,7 @@ function mapDbRecord(row) {
   return {
     id: row.id,
     reg: row.registration,
-    staff: row.staff_name || "Demo User",
+    updatedBy: recordUserDisplayName(row),
     vehicleType: row.vehicle_type || "Customer vehicle",
     stage: row.stage,
     note: row.note || "",
@@ -356,12 +407,12 @@ function mapDbRecord(row) {
 function mapRecordForInsert(record) {
   return {
     registration: record.reg,
+    user_id: record.userId,
     status: record.status,
     stage: record.stage,
     vehicle_type: record.vehicleType,
     mileage: cleanMileage(record.mileage),
     parking_location: record.parkingLocation || null,
-    staff_name: record.staff,
     note: cleanNote(record.note) || null,
     latitude: toNullableNumber(record.lat),
     longitude: toNullableNumber(record.lng),
@@ -378,7 +429,7 @@ function handleDbError(error, fallback) {
 async function getRecords() {
   const { data, error } = await db
     .from("vehicle_movements")
-    .select("*")
+    .select(VEHICLE_MOVEMENT_SELECT)
     .order("created_at", { ascending: false });
 
   if (error) return handleDbError(error, []);
@@ -389,7 +440,7 @@ async function getLatestRecord(reg) {
   const cleaned = normaliseReg(reg);
   const { data, error } = await db
     .from("vehicle_movements")
-    .select("*")
+    .select(VEHICLE_MOVEMENT_SELECT)
     .eq("registration", cleaned)
     .order("created_at", { ascending: false })
     .limit(1)
@@ -403,7 +454,7 @@ async function getVehicleHistory(reg) {
   const cleaned = normaliseReg(reg);
   const { data, error } = await db
     .from("vehicle_movements")
-    .select("*")
+    .select(VEHICLE_MOVEMENT_SELECT)
     .eq("registration", cleaned)
     .order("created_at", { ascending: false });
 
@@ -417,7 +468,7 @@ async function getMatchingLatestRecords(searchTerm) {
 
   const { data, error } = await db
     .from("vehicle_movements")
-    .select("*")
+    .select(VEHICLE_MOVEMENT_SELECT)
     .ilike("registration", `%${cleaned}%`)
     .order("created_at", { ascending: false })
     .limit(100);
@@ -467,11 +518,12 @@ function showFormMessage(messageElement, message) {
   alert(message);
 }
 
-function buildRecord({ reg, staff, vehicleType, stage, note, status, action, position, mileage, parkingLocation }) {
+function buildRecord({ reg, userId, updatedBy, vehicleType, stage, note, status, action, position, mileage, parkingLocation }) {
   return {
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
     reg: normaliseReg(reg),
-    staff: staff.trim() || "Demo User",
+    userId: userId || null,
+    updatedBy: String(updatedBy || "").trim() || "Unknown user",
     vehicleType: vehicleType || "Customer vehicle",
     stage,
     note: cleanNote(note),
@@ -487,19 +539,18 @@ function buildRecord({ reg, staff, vehicleType, stage, note, status, action, pos
 }
 
 async function addRecord(record) {
-  const {
-    data: { session }
-  } = await db.auth.getSession();
+  const profile = await getAuthenticatedMovementProfile();
+  if (!profile?.id) return;
 
-  if (!session) {
-    showLogin();
-    alert("Please sign in before saving vehicle records.");
-    return;
-  }
+  const insertRecord = {
+    ...record,
+    userId: profile.id,
+    updatedBy: profileDisplayName(profile, currentAuthUser?.email)
+  };
 
   const { error } = await db
     .from("vehicle_movements")
-    .insert(mapRecordForInsert(record));
+    .insert(mapRecordForInsert(insertRecord));
 
   if (error) {
     console.error(error);
@@ -508,7 +559,7 @@ async function addRecord(record) {
   }
 
   await renderActivity();
-  await renderVehicleResult(record.reg);
+  await renderVehicleResult(insertRecord.reg);
 }
 
 function captureGpsPosition() {
@@ -566,7 +617,7 @@ async function getPositionForSave({ button, parkingLocation, messageElement }) {
 function movementLine(record) {
   const action = record.action === "Location updated" ? "Updated" : record.action;
   return [
-    `${action} by ${record.staff || "Unknown user"}`,
+    `${action} by ${record.updatedBy || "Unknown user"}`,
     record.status ? `Status: ${record.status}` : "",
     record.stage ? `Current Stage: ${record.stage}` : "",
     record.parkingLocation ? `Parked: ${record.parkingLocation}` : "",
@@ -579,7 +630,7 @@ function movementLine(record) {
 function recentActivityDetails(record) {
   const action = record.action === "Location updated" ? "Updated" : record.action;
   return [
-    `${action} by ${record.staff || "Unknown user"}`,
+    `${action} by ${record.updatedBy || "Unknown user"}`,
     record.stage ? `Current Stage: ${record.stage}` : "",
     hasRecordedMileage(record) ? `Mileage: ${formatMileage(record.mileage)}` : "",
     hasValidAccuracy(record) ? `GPS Accuracy: approx. ${Math.round(record.accuracy)}m` : "",
@@ -649,7 +700,7 @@ async function renderVehicleResult(recordOrReg) {
       </div>
       <div class="vehicle-info-row">
         <span class="vehicle-info-label">Updated by:</span>
-        <strong>${record.staff || "Unknown user"}</strong>
+        <strong>${record.updatedBy || "Unknown user"}</strong>
       </div>
       <div class="vehicle-info-row">
         <span class="vehicle-info-label">Mileage:</span>
@@ -816,11 +867,9 @@ async function toggleVehicleHistory(reg) {
 async function markVehicleOut(reg) {
   const latest = await getLatestRecord(reg);
   if (!latest || latest.status === "OUT") return;
-  const staffName = await getCurrentStaffName();
 
   const record = buildRecord({
     reg: latest.reg,
-    staff: staffName,
     vehicleType: latest.vehicleType,
     stage: "Out",
     note: "",
@@ -837,7 +886,7 @@ async function markVehicleOut(reg) {
 async function renderActivity() {
   const { data, error } = await db
     .from("vehicle_movements")
-    .select("*")
+    .select(VEHICLE_MOVEMENT_SELECT)
     .order("created_at", { ascending: false })
     .limit(5);
 
@@ -920,10 +969,8 @@ checkInForm.addEventListener("submit", async event => {
 
     if (position === undefined) return;
 
-    const staffName = await getCurrentStaffName();
     const record = buildRecord({
       reg,
-      staff: staffName,
       vehicleType: checkInType.value,
       stage: "Checked In",
       note: checkInNote.value,
@@ -976,10 +1023,8 @@ updateForm.addEventListener("submit", async event => {
 
     if (position === undefined) return;
 
-    const staffName = await getCurrentStaffName();
     const record = buildRecord({
       reg: latest.reg,
-      staff: staffName,
       vehicleType: latest.vehicleType,
       stage: updateStage.value,
       note: updateNote.value,
