@@ -69,7 +69,8 @@ Marked OUT
 * No public sign-up flow
 * Main app hidden until a valid session exists
 * Sign out returns the user to the login screen
-* Signed-in user email saved as `staff_name`
+* Signed-in user profile linked to new records through `user_id`
+* Signed-in user's name saved as a movement display snapshot
 
 ### Vehicle Check In
 
@@ -117,6 +118,13 @@ Marked OUT
 * Displays latest 5 updates
 * Shows vehicle status
 * Quick access to vehicle records
+
+### My Stats
+
+* Personal movement summary for today, this week, or this month
+* Counts check-ins, location updates, marked OUT actions, and active vehicles handled
+* Shows most used location, most active time, activity over time, and recent personal activity
+* Uses `vehicle_movements.user_id` for user-specific stats
 
 ---
 
@@ -201,7 +209,8 @@ The app records:
 * Vehicle type
 * Mileage
 * Parking location
-* Staff email
+* Authenticated user ID
+* Staff display name snapshot
 * Optional movement note
 * Optional GPS latitude and longitude
 * Optional GPS accuracy
@@ -323,7 +332,8 @@ Potential future enhancements:
 * Added sign out support
 * Hid the main app until a valid session exists
 * Removed manual "Updated by" fields
-* Saved the signed-in user's email as `staff_name`
+* Linked new movement records to the authenticated user with `user_id`
+* Saved the signed-in user's name as a movement display snapshot
 * Added authenticated-only RLS SQL template
 * Added security documentation
 
