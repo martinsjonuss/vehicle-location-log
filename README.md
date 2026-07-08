@@ -147,13 +147,14 @@ The application currently supports:
 * Drive Thru
 * Budget
 * Sales
-* Wash/Valet
-* Parking 1
-* Parking 2
-* Parking 3
-* Parking 4
-* Parking 5
+* S1
+* S2
+* S3
+* S4
+* S7
 * Customer Car Park
+* Fruit Market
+* Breakdown Hill
 * Other
 
 Parking locations are optional and can be used alongside GPS location data.
