@@ -5,7 +5,7 @@
     "stage": "Checked In",
     "vehicleType": "Customer vehicle",
     "mileage": "42185",
-    "parkingLocation": "Parking 3",
+    "parkingLocation": "Drive Thru",
     "note": "Example placeholder only. App records are saved in Supabase."
   },
   {
@@ -14,7 +14,7 @@
     "stage": "Ready for Customer",
     "vehicleType": "Loan / courtesy car",
     "mileage": "",
-    "parkingLocation": "Sales",
+    "parkingLocation": "Drive Thru",
     "note": "Sample for future shared database development."
   }
 ]

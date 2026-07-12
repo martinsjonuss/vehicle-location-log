@@ -147,17 +147,7 @@
 
         <div>
           <label for="updateStage">Current stage</label>
-          <select id="updateStage">
-            <option>Parked</option>
-            <option>In Workshop</option>
-            <option>Servicing / Repair</option>
-            <option>Waiting for Valet</option>
-            <option>Valet / Wash</option>
-            <option>Ready for Customer</option>
-            <option>Moved / Reparked</option>
-            <option>Blocked In / Moved to Clear Access</option>
-            <option>Other</option>
-          </select>
+          <select id="updateStage"></select>
         </div>
 
         <div>
@@ -168,6 +158,7 @@
           <select id="updateParking">
             <option value="">Select parking location</option>
           </select>
+          <p id="updateParkingStageLocation" class="stage-location-display hidden" aria-live="polite"></p>
         </div>
 
         <div class="gps-toggle">

@@ -47,6 +47,7 @@ const updateTitle = document.getElementById("updateTitle");
 const updateReg = document.getElementById("updateReg");
 const updateStage = document.getElementById("updateStage");
 const updateParking = document.getElementById("updateParking");
+const updateParkingStageLocation = document.getElementById("updateParkingStageLocation");
 const updateGpsEnabled = document.getElementById("updateGpsEnabled");
 const updateNote = document.getElementById("updateNote");
 const updateMessage = document.getElementById("updateMessage");
@@ -67,8 +68,22 @@ const THEME_PREFERENCE_KEY = "vehicleLocationLogTheme";
 const MAX_MILEAGE_DIGITS = 7;
 const MAX_REGISTRATION_CHARS = 15;
 const SEARCH_RESULTS_PER_PAGE = 5;
+const DEFAULT_STAGE = "Parked";
+const RETURNED_FROM_WASH_STAGE = "Returned from Wash";
+const READY_FOR_CUSTOMER_STAGE = "Ready for Customer";
+const IN_WORKSHOP_STAGE = "In Workshop";
+const DEFAULT_PARKING_LOCATION = "Drive Thru";
+const WORKSHOP_LOCATION = "Workshop";
+const STAGE_OPTIONS = [
+  DEFAULT_STAGE,
+  RETURNED_FROM_WASH_STAGE,
+  READY_FOR_CUSTOMER_STAGE,
+  IN_WORKSHOP_STAGE,
+  "Valet / Wash",
+  "Other"
+];
 const PARKING_LOCATIONS = [
-  "Drive Thru",
+  DEFAULT_PARKING_LOCATION,
   "Budget",
   "Sales",
   "S1",
@@ -266,6 +281,7 @@ function switchMainView(viewName) {
   checkInTab.classList.toggle("active", checkInActive);
   findTab.classList.toggle("active", !checkInActive);
   updatePanel.classList.add("hidden");
+  if (checkInActive) resetCheckInParking();
 }
 
 function revealHomeView() {
@@ -309,6 +325,17 @@ function initialiseGpsPreference() {
   setGpsEnabled(isGpsEnabled());
 }
 
+function populateStageOptions() {
+  updateStage.replaceChildren();
+
+  STAGE_OPTIONS.forEach(stage => {
+    const option = document.createElement("option");
+    option.value = stage;
+    option.textContent = stage;
+    updateStage.appendChild(option);
+  });
+}
+
 function populateParkingLocations() {
   [checkInParking, updateParking].forEach(select => {
     const placeholder = select.querySelector("option[value='']");
@@ -321,6 +348,91 @@ function populateParkingLocations() {
       select.appendChild(option);
     });
   });
+}
+
+function isSelectableStage(stage) {
+  return STAGE_OPTIONS.includes(stage);
+}
+
+function isSelectableParkingLocation(location) {
+  return PARKING_LOCATIONS.includes(location);
+}
+
+function normalParkingDefault(location) {
+  return isSelectableParkingLocation(location) ? location : DEFAULT_PARKING_LOCATION;
+}
+
+function getUpdateParkingConfig() {
+  return {
+    stageSelect: updateStage,
+    parkingSelect: updateParking,
+    stageLocation: updateParkingStageLocation
+  };
+}
+
+function setStageValue(stageSelect, stage = DEFAULT_STAGE) {
+  stageSelect.value = isSelectableStage(stage) ? stage : DEFAULT_STAGE;
+}
+
+function setParkingDefault(parkingSelect, location) {
+  parkingSelect.dataset.defaultLocation = normalParkingDefault(location);
+}
+
+function getParkingDefault(parkingSelect) {
+  return normalParkingDefault(parkingSelect.dataset.defaultLocation);
+}
+
+function showNormalParkingSelect({ parkingSelect, stageLocation }) {
+  parkingSelect.disabled = false;
+  parkingSelect.classList.remove("hidden");
+  stageLocation.textContent = "";
+  stageLocation.classList.add("hidden");
+}
+
+function showStageLocation({ parkingSelect, stageLocation }) {
+  parkingSelect.value = "";
+  parkingSelect.disabled = true;
+  parkingSelect.classList.add("hidden");
+  stageLocation.textContent = WORKSHOP_LOCATION;
+  stageLocation.classList.remove("hidden");
+}
+
+function applyStageParkingBehavior(stageSelect, stageChanged = false) {
+  const config = getUpdateParkingConfig();
+  const { parkingSelect } = config;
+  const stage = stageSelect.value || DEFAULT_STAGE;
+
+  if (stage === IN_WORKSHOP_STAGE) {
+    showStageLocation(config);
+    return;
+  }
+
+  showNormalParkingSelect(config);
+
+  if (stage === READY_FOR_CUSTOMER_STAGE && stageChanged) {
+    parkingSelect.value = DEFAULT_PARKING_LOCATION;
+    return;
+  }
+
+  if (!isSelectableParkingLocation(parkingSelect.value)) {
+    parkingSelect.value = getParkingDefault(parkingSelect);
+  }
+}
+
+function getEffectiveParkingLocation(stageSelect, parkingSelect) {
+  return stageSelect.value === IN_WORKSHOP_STAGE ? WORKSHOP_LOCATION : parkingSelect.value;
+}
+
+function resetCheckInParking() {
+  checkInParking.value = DEFAULT_PARKING_LOCATION;
+}
+
+function resetUpdateStageAndParking(location = DEFAULT_PARKING_LOCATION) {
+  const defaultLocation = normalParkingDefault(location);
+  setParkingDefault(updateParking, defaultLocation);
+  setStageValue(updateStage);
+  updateParking.value = defaultLocation;
+  applyStageParkingBehavior(updateStage);
 }
 
 function profileDisplayName() {
@@ -776,13 +888,17 @@ async function getPositionForSave({ button, parkingLocation, messageElement }) {
   return undefined;
 }
 
+function locationDisplayLabel(location) {
+  return location === WORKSHOP_LOCATION ? "Location" : "Parked";
+}
+
 function movementLine(record) {
   const action = record.action === "Location updated" ? "Updated" : record.action;
   return [
     `${action} by ${record.staff || "Unknown user"}`,
     record.status ? `Status: ${record.status}` : "",
     record.stage ? `Current Stage: ${record.stage}` : "",
-    record.parkingLocation ? `Parked: ${record.parkingLocation}` : "",
+    record.parkingLocation ? `${locationDisplayLabel(record.parkingLocation)}: ${record.parkingLocation}` : "",
     hasRecordedMileage(record) ? `Mileage: ${formatMileage(record.mileage)}` : "",
     hasValidAccuracy(record) ? `GPS approx. ${Math.round(record.accuracy)}m` : "",
     record.note ? record.note : ""
@@ -847,7 +963,7 @@ async function renderVehicleResult(recordOrReg) {
 
       ${record.status === "IN" ? `
         <div class="activity-parked vehicle-parked-row">
-          <div class="vehicle-parked-value"><span>Parked:</span> ${record.parkingLocation || "Not specified"}</div>
+          <div class="vehicle-parked-value"><span>${locationDisplayLabel(record.parkingLocation)}:</span> ${record.parkingLocation || "Not specified"}</div>
           ${hasLocation ? `
             <div class="vehicle-row-actions">
               <a class="detail-action-button" href="${mapsUrl(record)}" target="_blank" rel="noopener">Open</a>
@@ -950,7 +1066,7 @@ function renderSearchResultsPage() {
               <span class="history-reg registration-plate">${formatRegistration(record.reg)}</span>
               <span class="history-time">${formatTime(record.createdAt)}</span>
             </div>
-            ${record.status === "IN" ? `<p class="activity-parked"><span>Parked:</span> ${record.parkingLocation || "Not specified"}</p>` : ""}
+            ${record.status === "IN" ? `<p class="activity-parked"><span>${locationDisplayLabel(record.parkingLocation)}:</span> ${record.parkingLocation || "Not specified"}</p>` : ""}
             <div class="activity-footer">
               <span class="activity-status ${statusClass}">${record.status}</span>
             </div>
@@ -994,9 +1110,8 @@ async function openUpdatePanel(reg) {
   if (!latest) return;
 
   updateReg.value = latest.reg;
-  updateParking.value = "";
   updateNote.value = "";
-  updateStage.value = "Parked";
+  resetUpdateStageAndParking(latest.parkingLocation);
   setUpdateTitle(latest.reg);
   updatePanel.classList.remove("hidden");
   updatePanel.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1069,7 +1184,7 @@ async function renderActivity() {
           <span class="history-reg registration-plate">${formatRegistration(record.reg)}</span>
           <span class="history-time">${formatTime(record.createdAt)}</span>
         </div>
-        <p class="activity-parked"><span>Parked:</span> ${record.parkingLocation || "Not specified"}</p>
+        <p class="activity-parked"><span>${locationDisplayLabel(record.parkingLocation)}:</span> ${record.parkingLocation || "Not specified"}</p>
         <p class="history-note">${recentActivityDetails(record)}</p>
         <div class="activity-footer">
           <span class="activity-status ${statusClass}">${record.status}</span>
@@ -1158,7 +1273,7 @@ function renderStatsActivity(records) {
               <span class="history-reg registration-plate">${escapeHtml(formatRegistration(record.reg))}</span>
               <span class="history-time">${escapeHtml(formatTime(record.createdAt))}</span>
             </div>
-            ${record.parkingLocation ? `<p class="activity-parked"><span>Parked:</span> ${escapeHtml(record.parkingLocation)}</p>` : ""}
+            ${record.parkingLocation ? `<p class="activity-parked"><span>${escapeHtml(locationDisplayLabel(record.parkingLocation))}:</span> ${escapeHtml(record.parkingLocation)}</p>` : ""}
             <p class="history-note">${escapeHtml(recentActivityDetails(record))}</p>
             <div class="activity-footer">
               <span class="activity-status ${statusClass}">${escapeHtml(record.status)}</span>
@@ -1351,6 +1466,11 @@ parkingMapModal.addEventListener("click", event => {
   if (event.target === parkingMapModal) closeParkingMap();
 });
 parkingMapModal.addEventListener("close", resetParkingMap);
+updateStage.addEventListener("change", () => applyStageParkingBehavior(updateStage, true));
+checkInForm.addEventListener("reset", () => setTimeout(resetCheckInParking));
+updateForm.addEventListener("reset", () => setTimeout(() => {
+  resetUpdateStageAndParking(updateParking.dataset.defaultLocation);
+}));
 
 checkInMileage.addEventListener("input", () => {
   checkInMileage.value = String(checkInMileage.value || "").replace(/\D/g, "").slice(0, MAX_MILEAGE_DIGITS);
@@ -1402,7 +1522,7 @@ checkInForm.addEventListener("submit", async event => {
     await addRecord(record);
     checkInReg.value = "";
     checkInMileage.value = "";
-    checkInParking.value = "";
+    resetCheckInParking();
     checkInNote.value = "";
   } finally {
     button.disabled = false;
@@ -1429,7 +1549,8 @@ updateForm.addEventListener("submit", async event => {
   if (!latest) return;
 
   const button = updateForm.querySelector("button[type='submit']");
-  const parkingLocation = updateParking.value;
+  const stage = updateStage.value || DEFAULT_STAGE;
+  const parkingLocation = getEffectiveParkingLocation(updateStage, updateParking);
   button.disabled = true;
 
   try {
@@ -1446,7 +1567,7 @@ updateForm.addEventListener("submit", async event => {
       reg: latest.reg,
       staff: staffName,
       vehicleType: latest.vehicleType,
-      stage: updateStage.value,
+      stage,
       note: updateNote.value,
       status: "IN",
       action: "Location updated",
@@ -1578,6 +1699,9 @@ async function initialiseAuth() {
 }
 
 initialiseTheme();
+populateStageOptions();
 populateParkingLocations();
+resetCheckInParking();
+resetUpdateStageAndParking();
 initialiseGpsPreference();
 initialiseAuth();
