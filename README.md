@@ -77,7 +77,8 @@ Marked OUT
 * Vehicle registration capture
 * Mileage capture
 * Vehicle type selection
-* Optional parking location selection
+* Automatic current stage of Checked In
+* Parking location selection with Drive Thru selected by default
 * Optional notes
 * Optional GPS location capture
 * Parking location fallback when GPS is unavailable
@@ -98,6 +99,8 @@ Marked OUT
 * Update vehicle location after movement
 * Update current stage
 * Update parking location
+* Automatically set Drive Thru when the stage is Ready for Customer
+* Automatically display and save Workshop when the stage is In Workshop
 * Add movement notes
 * Record movement history
 * Save with parking location only when GPS is unavailable
@@ -145,6 +148,27 @@ Examples:
 * Customer collected vehicle
 * Courtesy vehicle currently off site
 * Sales vehicle released
+
+---
+
+## Current Stages
+
+The current-stage dropdown supports:
+
+* Parked
+* Returned from Wash
+* Ready for Customer
+* In Workshop
+* Valet / Wash
+* Other
+
+Parked is selected by default when the update form opens or resets.
+
+Returned from Wash keeps the normal parking-location dropdown visible and records that the vehicle is washed or cleaned while still parked.
+
+Ready for Customer automatically selects Drive Thru as the parking location. Staff can still choose another parking location afterwards for exceptions.
+
+In Workshop hides the normal parking-location dropdown and saves Workshop as the displayed location. Workshop is not a standard parking area and is not included in the parking-location options.
 
 ---
 
