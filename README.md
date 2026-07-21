@@ -132,6 +132,7 @@ Marked OUT
 ### Vehicle Fleet
 
 * Groups the current fleet into Loan, Courtesy, RAF, Enterprise, Other and Customer
+* Limits the Customer fleet category to Customer vehicles whose latest stage is Ready for Customer
 * Shows availability plus fuel and cleaning readiness for non-Customer vehicles
 * Uses Needs fuel and Needs cleaning switches in check-in and update forms; off means ready and on means attention is required
 * Provides contextual check-in, update, mark-out and history actions

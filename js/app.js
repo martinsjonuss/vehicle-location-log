@@ -1380,12 +1380,20 @@ async function renderVehicleFleetPaged() {
   fleetContent.setAttribute("aria-busy", "true");
 
   try {
-    const countResults = await Promise.all(VEHICLE_TYPES.flatMap(type => [
-      db.from("current_vehicle_fleet").select("id", { count: "exact", head: true }).eq("vehicle_type", type.value),
-      db.from("current_vehicle_fleet").select("id", { count: "exact", head: true }).eq("vehicle_type", type.value).eq("status", "IN")
-    ]));
+    const countResults = await Promise.all(VEHICLE_TYPES.flatMap(type => {
+      let totalQuery = db.from("current_vehicle_fleet").select("id", { count: "exact", head: true }).eq("vehicle_type", type.value);
+      let availableQuery = db.from("current_vehicle_fleet").select("id", { count: "exact", head: true }).eq("vehicle_type", type.value).eq("status", "IN");
+      if (type.value === "customer") {
+        totalQuery = totalQuery.eq("stage", READY_FOR_CUSTOMER_STAGE);
+        availableQuery = availableQuery.eq("stage", READY_FOR_CUSTOMER_STAGE);
+      }
+      return [totalQuery, availableQuery];
+    }));
     const totalResult = await db.from("current_vehicle_fleet").select("id", { count: "exact", head: true });
-    const failedResult = [...countResults, totalResult].find(result => result.error);
+    const knownTypeResult = await db.from("current_vehicle_fleet")
+      .select("id", { count: "exact", head: true })
+      .in("vehicle_type", VEHICLE_TYPES.map(type => type.value));
+    const failedResult = [...countResults, totalResult, knownTypeResult].find(result => result.error);
     if (failedResult) throw failedResult.error;
 
     const counts = VEHICLE_TYPES.map((type, index) => ({
@@ -1393,8 +1401,7 @@ async function renderVehicleFleetPaged() {
       total: countResults[index * 2].count || 0,
       available: countResults[index * 2 + 1].count || 0
     }));
-    const categorisedTotal = counts.reduce((sum, category) => sum + category.total, 0);
-    const legacyCount = Math.max((totalResult.count || 0) - categorisedTotal, 0);
+    const legacyCount = Math.max((totalResult.count || 0) - (knownTypeResult.count || 0), 0);
 
     fleetContent.innerHTML = `${totalResult.count ? "" : `<div class="empty-state fleet-empty-state">No vehicle data is available to your account.</div>`}${legacyCount ? `<div class="fleet-notice">${legacyCount} unique vehicle registration${legacyCount === 1 ? " has" : "s have"} a legacy or missing category. Combined Loan / Courtesy records cannot be split safely and remain available through search until updated.</div>` : ""}${counts.map(({ type, total, available }) => `
       <details class="fleet-category" data-fleet-type="${type.value}" data-total="${total}">
@@ -1424,9 +1431,13 @@ async function loadFleetCategoryPage(category, page) {
   list.setAttribute("aria-busy", "true");
 
   try {
-    const { data, error } = await db.from("current_vehicle_fleet")
+    let categoryQuery = db.from("current_vehicle_fleet")
       .select("*")
-      .eq("vehicle_type", category.dataset.fleetType)
+      .eq("vehicle_type", category.dataset.fleetType);
+    if (category.dataset.fleetType === "customer") {
+      categoryQuery = categoryQuery.eq("stage", READY_FOR_CUSTOMER_STAGE);
+    }
+    const { data, error } = await categoryQuery
       .order("status", { ascending: true })
       .order("created_at", { ascending: false })
       .range(from, from + FLEET_RECORDS_PER_PAGE - 1);
