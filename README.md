@@ -129,6 +129,14 @@ Marked OUT
 * Shows most used location, most active time, activity over time, and recent personal activity
 * Uses `vehicle_movements.user_id` for user-specific stats
 
+### Vehicle Fleet
+
+* Groups the current fleet into Loan, Courtesy, RAF, Enterprise, Other and Customer
+* Shows availability plus fuel and cleaning readiness for non-Customer vehicles
+* Uses Needs fuel and Needs cleaning switches in check-in and update forms; off means ready and on means attention is required
+* Provides contextual check-in, update, mark-out and history actions
+* Uses the database-side `current_vehicle_fleet` view for one current row per registration
+
 ---
 
 ## Status Tracking
@@ -241,6 +249,8 @@ The app records:
 * Created timestamp
 
 Each check-in, location update, or mark-out action creates a new movement row. Existing movement rows are not updated or deleted by the frontend.
+
+Fuel and cleaning readiness are stored with each movement. The latest movement is the current operational state, exposed through `current_vehicle_fleet`; this avoids a second competing vehicle table and avoids reducing all movement history in the browser.
 
 Vehicle records are stored in Supabase. Browser `localStorage` is used only for the user's GPS capture preference.
 

@@ -18,6 +18,7 @@ const themeColorMeta = document.getElementById("themeColorMeta");
 const heroCard = document.querySelector(".hero-card");
 const homeNavBtn = document.getElementById("homeNavBtn");
 const myStatsNavBtn = document.getElementById("myStatsNavBtn");
+const vehicleFleetNavBtn = document.getElementById("vehicleFleetNavBtn");
 
 const checkInTab = document.getElementById("checkInTab");
 const findTab = document.getElementById("findTab");
@@ -27,12 +28,18 @@ const updatePanel = document.getElementById("updatePanel");
 const statsView = document.getElementById("statsView");
 const statsPeriod = document.getElementById("statsPeriod");
 const statsContent = document.getElementById("statsContent");
+const fleetView = document.getElementById("fleetView");
+const fleetContent = document.getElementById("fleetContent");
+const fleetRetryBtn = document.getElementById("fleetRetryBtn");
 const homeSections = document.querySelectorAll(".home-section");
 
 const checkInForm = document.getElementById("checkInForm");
 const checkInReg = document.getElementById("checkInReg");
 const checkInMileage = document.getElementById("checkInMileage");
 const checkInType = document.getElementById("checkInType");
+const checkInFuelStatus = document.getElementById("checkInFuelStatus");
+const checkInCleaningStatus = document.getElementById("checkInCleaningStatus");
+const checkInReadinessFields = document.getElementById("checkInReadinessFields");
 const checkInParking = document.getElementById("checkInParking");
 const checkInGpsEnabled = document.getElementById("checkInGpsEnabled");
 const checkInNote = document.getElementById("checkInNote");
@@ -45,7 +52,12 @@ const vehicleResult = document.getElementById("vehicleResult");
 const updateForm = document.getElementById("updateForm");
 const updateTitle = document.getElementById("updateTitle");
 const updateReg = document.getElementById("updateReg");
+const updateType = document.getElementById("updateType");
 const updateStage = document.getElementById("updateStage");
+const updateMileage = document.getElementById("updateMileage");
+const updateFuelStatus = document.getElementById("updateFuelStatus");
+const updateCleaningStatus = document.getElementById("updateCleaningStatus");
+const updateReadinessFields = document.getElementById("updateReadinessFields");
 const updateParking = document.getElementById("updateParking");
 const updateParkingStageLocation = document.getElementById("updateParkingStageLocation");
 const updateGpsEnabled = document.getElementById("updateGpsEnabled");
@@ -68,12 +80,33 @@ const THEME_PREFERENCE_KEY = "vehicleLocationLogTheme";
 const MAX_MILEAGE_DIGITS = 7;
 const MAX_REGISTRATION_CHARS = 15;
 const SEARCH_RESULTS_PER_PAGE = 5;
+const FLEET_RECORDS_PER_PAGE = 5;
 const DEFAULT_STAGE = "Parked";
 const RETURNED_FROM_WASH_STAGE = "Returned from Wash";
 const READY_FOR_CUSTOMER_STAGE = "Ready for Customer";
 const IN_WORKSHOP_STAGE = "In Workshop";
 const DEFAULT_PARKING_LOCATION = "Drive Thru";
 const WORKSHOP_LOCATION = "Workshop";
+const VEHICLE_TYPES = Object.freeze([
+  { value: "loan", label: "Loan" },
+  { value: "courtesy", label: "Courtesy" },
+  { value: "raf", label: "RAF" },
+  { value: "enterprise", label: "Enterprise" },
+  { value: "other", label: "Other" },
+  { value: "customer", label: "Customer" }
+]);
+const READINESS_OPTIONS = Object.freeze({
+  fuel: [
+    { value: "unknown", label: "Not recorded" },
+    { value: "ready", label: "Fuelled" },
+    { value: "needs_fuel", label: "Needs fuel" }
+  ],
+  cleaning: [
+    { value: "unknown", label: "Not recorded" },
+    { value: "clean", label: "Clean" },
+    { value: "needs_cleaning", label: "Needs cleaning" }
+  ]
+});
 const STAGE_OPTIONS = [
   DEFAULT_STAGE,
   RETURNED_FROM_WASH_STAGE,
@@ -215,6 +248,40 @@ function escapeHtml(value) {
     .replace(/'/g, "&#039;");
 }
 
+function vehicleTypeLabel(value) {
+  return VEHICLE_TYPES.find(type => type.value === value)?.label || "Vehicle type not recorded";
+}
+
+function normaliseVehicleType(value) {
+  const cleaned = String(value || "").trim().toLowerCase();
+  if (cleaned === "customer" || cleaned === "customer vehicle") return "customer";
+  return VEHICLE_TYPES.some(type => type.value === cleaned) ? cleaned : "";
+}
+
+function readinessLabel(kind, value) {
+  return READINESS_OPTIONS[kind].find(option => option.value === value)?.label || "Not recorded";
+}
+
+function hasRecordedReadiness(value) {
+  return Boolean(value) && value !== "unknown";
+}
+
+function applyReadinessVisibility(typeSelect, fields, fuelToggle, cleaningToggle) {
+  const isCustomer = typeSelect.value === "customer";
+  fields.classList.toggle("hidden", isCustomer);
+  fields.setAttribute("aria-hidden", String(isCustomer));
+  fuelToggle.disabled = isCustomer;
+  cleaningToggle.disabled = isCustomer;
+}
+
+function applyCheckInReadinessVisibility() {
+  applyReadinessVisibility(checkInType, checkInReadinessFields, checkInFuelStatus, checkInCleaningStatus);
+}
+
+function applyUpdateReadinessVisibility() {
+  applyReadinessVisibility(updateType, updateReadinessFields, updateFuelStatus, updateCleaningStatus);
+}
+
 function startOfDay(date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
@@ -287,10 +354,21 @@ function switchMainView(viewName) {
 function revealHomeView() {
   currentPage = "home";
   statsView.classList.add("hidden");
+  fleetView.classList.add("hidden");
   homeSections.forEach(section => section.classList.remove("page-hidden"));
+  setActiveNav(homeNavBtn);
+}
+
+function setActiveNav(activeButton) {
+  [homeNavBtn, myStatsNavBtn, vehicleFleetNavBtn].forEach(button => {
+    const active = button === activeButton;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-current", active ? "page" : "false");
+  });
 }
 
 function showHomeView() {
+  if (location.hash) history.replaceState(null, "", location.pathname + location.search);
   revealHomeView();
   closeProfileDrawer(false);
   switchMainView("find");
@@ -302,13 +380,33 @@ function goHome() {
 }
 
 async function showStatsView() {
+  history.replaceState(null, "", "#stats");
   currentPage = "stats";
   updatePanel.classList.add("hidden");
   homeSections.forEach(section => section.classList.add("page-hidden"));
   statsView.classList.remove("hidden");
+  fleetView.classList.add("hidden");
+  setActiveNav(myStatsNavBtn);
   closeProfileDrawer();
   await renderMyStats();
   statsView.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+async function showFleetView() {
+  if (!currentAuthUser) {
+    showLogin("Please sign in to view the vehicle fleet.");
+    return;
+  }
+  history.replaceState(null, "", "#fleet");
+  currentPage = "fleet";
+  updatePanel.classList.add("hidden");
+  homeSections.forEach(section => section.classList.add("page-hidden"));
+  statsView.classList.add("hidden");
+  fleetView.classList.remove("hidden");
+  setActiveNav(vehicleFleetNavBtn);
+  closeProfileDrawer();
+  await renderVehicleFleetPaged();
+  fleetView.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
 function isGpsEnabled() {
@@ -334,6 +432,18 @@ function populateStageOptions() {
     option.textContent = stage;
     updateStage.appendChild(option);
   });
+}
+
+function populateVehicleAndReadinessOptions() {
+  [checkInType, updateType].forEach(select => {
+    select.replaceChildren();
+    [...VEHICLE_TYPES]
+      .sort((a, b) => (a.value === "customer" ? -1 : b.value === "customer" ? 1 : 0))
+      .forEach(type => select.add(new Option(type.label, type.value)));
+    select.value = "customer";
+  });
+  applyCheckInReadinessVisibility();
+  applyUpdateReadinessVisibility();
 }
 
 function populateParkingLocations() {
@@ -495,6 +605,7 @@ function showLogin(message) {
   loginScreen.classList.remove("hidden");
   appShell.classList.add("hidden");
   updatePanel.classList.add("hidden");
+  fleetContent.replaceChildren();
   loginPassword.value = "";
   updateProfileDisplay();
   if (message !== undefined) {
@@ -562,8 +673,10 @@ async function showApp() {
   appShell.classList.remove("hidden");
   loginMessage.textContent = "";
   updateProfileDisplay();
-  switchMainView("find");
   await renderActivity();
+  if (location.hash === "#fleet") await showFleetView();
+  else if (location.hash === "#stats") await showStatsView();
+  else switchMainView("find");
   loadingScreen.classList.add("hidden");
 }
 
@@ -659,7 +772,9 @@ function mapDbRecord(row) {
     id: row.id,
     reg: row.registration,
     staff: row.staff_name || "Demo User",
-    vehicleType: row.vehicle_type || "Customer vehicle",
+    vehicleType: normaliseVehicleType(row.vehicle_type),
+    fuelStatus: row.fuel_status || "unknown",
+    cleaningStatus: row.cleaning_status || "unknown",
     stage: row.stage,
     note: row.note || "",
     status: row.status,
@@ -680,6 +795,8 @@ function mapRecordForInsert(record) {
     status: record.status,
     stage: record.stage,
     vehicle_type: record.vehicleType,
+    fuel_status: record.fuelStatus || "unknown",
+    cleaning_status: record.cleaningStatus || "unknown",
     mileage: cleanMileage(record.mileage),
     parking_location: record.parkingLocation || null,
     staff_name: record.staff,
@@ -788,13 +905,15 @@ function showFormMessage(messageElement, message) {
   alert(message);
 }
 
-function buildRecord({ reg, userId, staff, vehicleType, stage, note, status, action, position, mileage, parkingLocation }) {
+function buildRecord({ reg, userId, staff, vehicleType, fuelStatus, cleaningStatus, stage, note, status, action, position, mileage, parkingLocation }) {
   return {
     id: crypto.randomUUID ? crypto.randomUUID() : String(Date.now()),
     reg: normaliseReg(reg),
     userId: userId || null,
     staff: staff.trim() || "Demo User",
-    vehicleType: vehicleType || "Customer vehicle",
+    vehicleType: vehicleType || "",
+    fuelStatus: fuelStatus || "unknown",
+    cleaningStatus: cleaningStatus || "unknown",
     stage,
     note: cleanNote(note),
     status,
@@ -829,7 +948,9 @@ async function addRecord(record) {
   }
 
   await renderActivity();
-  if (currentPage === "stats") {
+  if (currentPage === "fleet") {
+    await renderVehicleFleetPaged();
+  } else if (currentPage === "stats") {
     await renderMyStats();
   } else {
     await renderVehicleResult(insertRecord.reg);
@@ -922,7 +1043,10 @@ function prepareVehicleCheckIn(record) {
 
   const matchingType = Array.from(checkInType.options)
     .find(option => option.value === record.vehicleType);
-  if (matchingType) checkInType.value = matchingType.value;
+  checkInType.value = matchingType ? matchingType.value : "";
+  checkInFuelStatus.checked = record.fuelStatus === "needs_fuel";
+  checkInCleaningStatus.checked = record.cleaningStatus === "needs_cleaning";
+  applyCheckInReadinessVisibility();
 
   checkInMessage.textContent = "";
   checkInView.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -958,7 +1082,7 @@ async function renderVehicleResult(recordOrReg) {
 
     <div class="vehicle-info-list">
       ${record.status === "IN"
-        ? `<button class="primary-button vehicle-primary-action" type="button" data-action="update-location" data-reg="${record.reg}">Update Location</button>`
+        ? `<button class="primary-button vehicle-primary-action" type="button" data-action="update-location" data-reg="${record.reg}">Update</button>`
         : `<button class="primary-button vehicle-primary-action" type="button" data-action="check-in" data-reg="${record.reg}">Check In</button>`}
 
       ${record.status === "IN" ? `
@@ -966,12 +1090,24 @@ async function renderVehicleResult(recordOrReg) {
           <div class="vehicle-parked-value"><span>${locationDisplayLabel(record.parkingLocation)}:</span> ${record.parkingLocation || "Not specified"}</div>
           ${hasLocation ? `
             <div class="vehicle-row-actions">
-              <a class="detail-action-button" href="${mapsUrl(record)}" target="_blank" rel="noopener">Open</a>
+              <a class="detail-action-button" href="${mapsUrl(record)}" target="_blank" rel="noopener">Open in Maps</a>
             </div>
           ` : ""}
         </div>
       ` : ""}
 
+      <div class="vehicle-info-row">
+        <span class="vehicle-info-label">Vehicle type:</span>
+        <strong>${escapeHtml(vehicleTypeLabel(record.vehicleType))}</strong>
+      </div>
+      ${record.vehicleType !== "customer" && hasRecordedReadiness(record.fuelStatus) ? `<div class="vehicle-info-row">
+        <span class="vehicle-info-label">Fuel:</span>
+        <strong>${escapeHtml(readinessLabel("fuel", record.fuelStatus))}</strong>
+      </div>` : ""}
+      ${record.vehicleType !== "customer" && hasRecordedReadiness(record.cleaningStatus) ? `<div class="vehicle-info-row">
+        <span class="vehicle-info-label">Cleaning:</span>
+        <strong>${escapeHtml(readinessLabel("cleaning", record.cleaningStatus))}</strong>
+      </div>` : ""}
       <div class="vehicle-info-row">
         <span class="vehicle-info-label">Current Stage:</span>
         <strong>${record.stage || "Not specified"}</strong>
@@ -1110,7 +1246,12 @@ async function openUpdatePanel(reg) {
   if (!latest) return;
 
   updateReg.value = latest.reg;
+  updateType.value = VEHICLE_TYPES.some(type => type.value === latest.vehicleType) ? latest.vehicleType : "";
+  updateMileage.value = latest.mileage ?? "";
   updateNote.value = "";
+  updateFuelStatus.checked = latest.fuelStatus === "needs_fuel";
+  updateCleaningStatus.checked = latest.cleaningStatus === "needs_cleaning";
+  applyUpdateReadinessVisibility();
   resetUpdateStageAndParking(latest.parkingLocation);
   setUpdateTitle(latest.reg);
   updatePanel.classList.remove("hidden");
@@ -1144,12 +1285,19 @@ async function toggleVehicleHistory(reg) {
 async function markVehicleOut(reg) {
   const latest = await getLatestRecord(reg);
   if (!latest || latest.status === "OUT") return;
+  if (!VEHICLE_TYPES.some(type => type.value === latest.vehicleType)) {
+    alert("Select a current vehicle type in Update before marking this legacy record OUT.");
+    await openUpdatePanel(reg);
+    return;
+  }
   const staffName = await getCurrentStaffName();
 
   const record = buildRecord({
     reg: latest.reg,
     staff: staffName,
     vehicleType: latest.vehicleType,
+    fuelStatus: latest.fuelStatus,
+    cleaningStatus: latest.cleaningStatus,
     stage: "Out",
     note: "",
     status: "OUT",
@@ -1160,6 +1308,171 @@ async function markVehicleOut(reg) {
   });
 
   await addRecord(record);
+}
+
+// Fleet order: IN needing attention, other IN, then OUT; newest first within groups.
+function fleetSort(a, b) {
+  const rank = record => record.status === "OUT" ? 2 :
+    ((record.fuelStatus === "needs_fuel" || record.cleaningStatus === "needs_cleaning") ? 0 : 1);
+  return rank(a) - rank(b) || new Date(b.createdAt) - new Date(a.createdAt);
+}
+
+function renderFleetVehicle(record) {
+  const isIn = record.status === "IN";
+  const attention = isIn && (record.fuelStatus === "needs_fuel" || record.cleaningStatus === "needs_cleaning");
+  return `<article class="fleet-vehicle-card${attention ? " needs-attention" : ""}" data-reg="${escapeHtml(record.reg)}">
+    <div class="fleet-vehicle-heading"><span class="registration-plate">${escapeHtml(formatRegistration(record.reg))}</span><span class="activity-status ${isIn ? "status-in" : "status-out"}">${record.status}</span></div>
+    ${isIn ? `<div class="fleet-vehicle-details"><span><strong>Location:</strong> ${escapeHtml(record.parkingLocation || "Not recorded")}</span>${record.vehicleType !== "customer" && hasRecordedReadiness(record.fuelStatus) ? `<span><strong>Fuel:</strong> ${escapeHtml(readinessLabel("fuel", record.fuelStatus))}</span>` : ""}${record.vehicleType !== "customer" && hasRecordedReadiness(record.cleaningStatus) ? `<span><strong>Cleaning:</strong> ${escapeHtml(readinessLabel("cleaning", record.cleaningStatus))}</span>` : ""}${record.stage ? `<span><strong>Stage:</strong> ${escapeHtml(record.stage)}</span>` : ""}</div>` : `<p class="fleet-out-detail">Marked out ${escapeHtml(formatTime(record.createdAt))}</p>`}
+    <p class="fleet-updated">Updated ${escapeHtml(formatTime(record.createdAt))}${record.staff ? ` by ${escapeHtml(record.staff)}` : ""}</p>
+    <div class="fleet-actions">${isIn ? `<button class="ghost-button" type="button" data-fleet-action="update">Update</button><button class="secondary-button" type="button" data-fleet-action="out">Mark OUT</button>` : `<button class="primary-button" type="button" data-fleet-action="checkin">Check In</button>`}<button class="ghost-button" type="button" data-fleet-action="history">View history</button></div>
+  </article>`;
+}
+
+async function renderVehicleFleet() {
+  if (!currentAuthUser || currentPage !== "fleet") return;
+  fleetContent.innerHTML = `<div class="empty-state">Loading vehicle fleet...</div>`;
+  fleetContent.setAttribute("aria-busy", "true");
+  try {
+    const { data, error } = await db.from("current_vehicle_fleet").select("*").order("created_at", { ascending: false });
+    if (error) throw error;
+    const records = (data || []).map(mapDbRecord);
+    const validTypes = new Set(VEHICLE_TYPES.map(type => type.value));
+    const legacyCount = records.filter(record => !validTypes.has(record.vehicleType)).length;
+    fleetContent.innerHTML = `${records.length ? "" : `<div class="empty-state fleet-empty-state">No vehicle data is available to your account.</div>`}${legacyCount ? `<div class="fleet-notice">${legacyCount} unique vehicle registration${legacyCount === 1 ? " has" : "s have"} a legacy or missing category. Combined Loan / Courtesy records cannot be split safely and remain available through search until updated.</div>` : ""}${VEHICLE_TYPES.map(type => {
+      const category = records.filter(record => record.vehicleType === type.value).sort(fleetSort);
+      const available = category.filter(record => record.status === "IN").length;
+      return `<details class="fleet-category"><summary><span class="fleet-category-name">${type.label}</span><span class="fleet-category-count">${available} available / ${category.length} total</span><span class="fleet-chevron" aria-hidden="true">⌄</span></summary><div class="fleet-vehicle-list">${category.length ? category.map(renderFleetVehicle).join("") : `<div class="empty-state">No vehicles recorded in this category.</div>`}</div></details>`;
+    }).join("")}`;
+    wireFleetActions();
+  } catch (error) {
+    console.error(error);
+    fleetContent.innerHTML = `<div class="empty-state fleet-error-state"><p>Vehicle fleet could not be loaded.</p><button class="ghost-button" type="button" data-fleet-retry>Try again</button></div>`;
+    fleetContent.querySelector("[data-fleet-retry]")?.addEventListener("click", renderVehicleFleet);
+  } finally { fleetContent.removeAttribute("aria-busy"); }
+}
+
+function wireFleetActions() {
+  fleetContent.querySelectorAll("[data-fleet-action]").forEach(button => button.addEventListener("click", async () => {
+    const reg = button.closest("[data-reg]")?.dataset.reg;
+    if (!reg || button.disabled) return;
+    button.disabled = true;
+    try {
+      const action = button.dataset.fleetAction;
+      if (action === "out") {
+        await markVehicleOut(reg);
+        if (currentPage === "fleet") await renderVehicleFleetPaged();
+      } else if (action === "checkin") {
+        const latest = await getLatestRecord(reg);
+        if (latest) prepareVehicleCheckIn(latest);
+      } else {
+        showHomeView();
+        await renderVehicleResult(reg);
+        if (action === "update") await openUpdatePanel(reg);
+        else await toggleVehicleHistory(reg);
+      }
+    } finally { if (button.isConnected) button.disabled = false; }
+  }));
+}
+
+async function renderVehicleFleetPaged() {
+  if (!currentAuthUser || currentPage !== "fleet") return;
+  fleetContent.innerHTML = `<div class="empty-state">Loading vehicle fleet...</div>`;
+  fleetContent.setAttribute("aria-busy", "true");
+
+  try {
+    const countResults = await Promise.all(VEHICLE_TYPES.flatMap(type => [
+      db.from("current_vehicle_fleet").select("id", { count: "exact", head: true }).eq("vehicle_type", type.value),
+      db.from("current_vehicle_fleet").select("id", { count: "exact", head: true }).eq("vehicle_type", type.value).eq("status", "IN")
+    ]));
+    const totalResult = await db.from("current_vehicle_fleet").select("id", { count: "exact", head: true });
+    const failedResult = [...countResults, totalResult].find(result => result.error);
+    if (failedResult) throw failedResult.error;
+
+    const counts = VEHICLE_TYPES.map((type, index) => ({
+      type,
+      total: countResults[index * 2].count || 0,
+      available: countResults[index * 2 + 1].count || 0
+    }));
+    const categorisedTotal = counts.reduce((sum, category) => sum + category.total, 0);
+    const legacyCount = Math.max((totalResult.count || 0) - categorisedTotal, 0);
+
+    fleetContent.innerHTML = `${totalResult.count ? "" : `<div class="empty-state fleet-empty-state">No vehicle data is available to your account.</div>`}${legacyCount ? `<div class="fleet-notice">${legacyCount} unique vehicle registration${legacyCount === 1 ? " has" : "s have"} a legacy or missing category. Combined Loan / Courtesy records cannot be split safely and remain available through search until updated.</div>` : ""}${counts.map(({ type, total, available }) => `
+      <details class="fleet-category" data-fleet-type="${type.value}" data-total="${total}">
+        <summary><span class="fleet-category-name">${type.label}</span><span class="fleet-category-count">${available} available / ${total} total</span><span class="fleet-chevron" aria-hidden="true">⌄</span></summary>
+        <div class="fleet-vehicle-list"><div class="empty-state">Open this category to load vehicles.</div></div>
+      </details>`).join("")}`;
+
+    fleetContent.querySelectorAll(".fleet-category").forEach(category => category.addEventListener("toggle", () => {
+      if (category.open && category.dataset.loaded !== "true") loadFleetCategoryPage(category, 1);
+    }));
+  } catch (error) {
+    console.error(error);
+    fleetContent.innerHTML = `<div class="empty-state fleet-error-state"><p>Vehicle fleet could not be loaded.</p><button class="ghost-button" type="button" data-fleet-retry>Try again</button></div>`;
+    fleetContent.querySelector("[data-fleet-retry]")?.addEventListener("click", renderVehicleFleetPaged);
+  } finally {
+    fleetContent.removeAttribute("aria-busy");
+  }
+}
+
+async function loadFleetCategoryPage(category, page) {
+  const list = category.querySelector(".fleet-vehicle-list");
+  const total = Number(category.dataset.total || 0);
+  const totalPages = Math.max(Math.ceil(total / FLEET_RECORDS_PER_PAGE), 1);
+  const safePage = Math.min(Math.max(page, 1), totalPages);
+  const from = (safePage - 1) * FLEET_RECORDS_PER_PAGE;
+  list.innerHTML = `<div class="empty-state">Loading vehicles...</div>`;
+  list.setAttribute("aria-busy", "true");
+
+  try {
+    const { data, error } = await db.from("current_vehicle_fleet")
+      .select("*")
+      .eq("vehicle_type", category.dataset.fleetType)
+      .order("status", { ascending: true })
+      .order("created_at", { ascending: false })
+      .range(from, from + FLEET_RECORDS_PER_PAGE - 1);
+    if (error) throw error;
+    const records = (data || []).map(mapDbRecord);
+    list.innerHTML = `${records.length ? records.map(renderFleetVehicle).join("") : `<div class="empty-state">No vehicles recorded in this category.</div>`}${totalPages > 1 ? `
+      <div class="fleet-pagination">
+        <button class="ghost-button" type="button" data-fleet-page="${safePage - 1}" ${safePage === 1 ? "disabled" : ""}>Previous</button>
+        <span class="pagination-status">Page ${safePage} of ${totalPages}</span>
+        <button class="ghost-button" type="button" data-fleet-page="${safePage + 1}" ${safePage === totalPages ? "disabled" : ""}>Next</button>
+      </div>` : ""}`;
+    category.dataset.loaded = "true";
+    wireFleetActionsIn(list);
+    list.querySelectorAll("[data-fleet-page]").forEach(button => button.addEventListener("click", () => loadFleetCategoryPage(category, Number(button.dataset.fleetPage))));
+  } catch (error) {
+    console.error(error);
+    list.innerHTML = `<div class="empty-state fleet-error-state"><p>This category could not be loaded.</p><button class="ghost-button" type="button" data-category-retry>Try again</button></div>`;
+    list.querySelector("[data-category-retry]")?.addEventListener("click", () => loadFleetCategoryPage(category, safePage));
+  } finally {
+    list.removeAttribute("aria-busy");
+  }
+}
+
+function wireFleetActionsIn(root) {
+  root.querySelectorAll("[data-fleet-action]").forEach(button => button.addEventListener("click", async () => {
+    const reg = button.closest("[data-reg]")?.dataset.reg;
+    if (!reg || button.disabled) return;
+    button.disabled = true;
+    try {
+      const action = button.dataset.fleetAction;
+      if (action === "out") {
+        await markVehicleOut(reg);
+        if (currentPage === "fleet") await renderVehicleFleetPaged();
+      } else if (action === "checkin") {
+        const latest = await getLatestRecord(reg);
+        if (latest) prepareVehicleCheckIn(latest);
+      } else {
+        showHomeView();
+        await renderVehicleResult(reg);
+        if (action === "update") await openUpdatePanel(reg);
+        else await toggleVehicleHistory(reg);
+      }
+    } finally {
+      if (button.isConnected) button.disabled = false;
+    }
+  }));
 }
 
 async function renderActivity() {
@@ -1442,6 +1755,8 @@ myStatsNavBtn.addEventListener("click", () => {
     statsContent.innerHTML = `<div class="empty-state">Your stats could not be loaded. Please try again.</div>`;
   });
 });
+vehicleFleetNavBtn.addEventListener("click", () => showFleetView());
+fleetRetryBtn.addEventListener("click", renderVehicleFleetPaged);
 heroCard.addEventListener("click", goHome);
 heroCard.addEventListener("keydown", event => {
   if (event.key === "Enter" || event.key === " ") {
@@ -1467,13 +1782,27 @@ parkingMapModal.addEventListener("click", event => {
 });
 parkingMapModal.addEventListener("close", resetParkingMap);
 updateStage.addEventListener("change", () => applyStageParkingBehavior(updateStage, true));
-checkInForm.addEventListener("reset", () => setTimeout(resetCheckInParking));
+checkInType.addEventListener("change", applyCheckInReadinessVisibility);
+updateType.addEventListener("change", applyUpdateReadinessVisibility);
+checkInFuelStatus.addEventListener("change", applyCheckInReadinessVisibility);
+checkInCleaningStatus.addEventListener("change", applyCheckInReadinessVisibility);
+updateFuelStatus.addEventListener("change", applyUpdateReadinessVisibility);
+updateCleaningStatus.addEventListener("change", applyUpdateReadinessVisibility);
+checkInForm.addEventListener("reset", () => setTimeout(() => {
+  resetCheckInParking();
+  applyCheckInReadinessVisibility();
+}));
 updateForm.addEventListener("reset", () => setTimeout(() => {
   resetUpdateStageAndParking(updateParking.dataset.defaultLocation);
+  applyUpdateReadinessVisibility();
 }));
 
 checkInMileage.addEventListener("input", () => {
   checkInMileage.value = String(checkInMileage.value || "").replace(/\D/g, "").slice(0, MAX_MILEAGE_DIGITS);
+});
+
+updateMileage.addEventListener("input", () => {
+  updateMileage.value = String(updateMileage.value || "").replace(/\D/g, "").slice(0, MAX_MILEAGE_DIGITS);
 });
 
 checkInForm.addEventListener("submit", async event => {
@@ -1488,7 +1817,7 @@ checkInForm.addEventListener("submit", async event => {
 
   const latest = await getLatestRecord(reg);
   if (latest?.status === "IN") {
-    checkInMessage.textContent = "Vehicle is already checked in. Use Find Vehicle to Update Location instead.";
+    checkInMessage.textContent = "Vehicle is already checked in. Use Find Vehicle to update it instead.";
     return;
   }
 
@@ -1510,6 +1839,8 @@ checkInForm.addEventListener("submit", async event => {
       reg,
       staff: staffName,
       vehicleType: checkInType.value,
+      fuelStatus: checkInType.value === "customer" ? "unknown" : (checkInFuelStatus.checked ? "needs_fuel" : "ready"),
+      cleaningStatus: checkInType.value === "customer" ? "unknown" : (checkInCleaningStatus.checked ? "needs_cleaning" : "clean"),
       stage: "Checked In",
       note: checkInNote.value,
       status: "IN",
@@ -1522,6 +1853,10 @@ checkInForm.addEventListener("submit", async event => {
     await addRecord(record);
     checkInReg.value = "";
     checkInMileage.value = "";
+    checkInType.value = "customer";
+    checkInFuelStatus.checked = false;
+    checkInCleaningStatus.checked = false;
+    applyCheckInReadinessVisibility();
     resetCheckInParking();
     checkInNote.value = "";
   } finally {
@@ -1566,18 +1901,21 @@ updateForm.addEventListener("submit", async event => {
     const record = buildRecord({
       reg: latest.reg,
       staff: staffName,
-      vehicleType: latest.vehicleType,
+      vehicleType: updateType.value,
+      fuelStatus: updateType.value === "customer" ? "unknown" : (updateFuelStatus.checked ? "needs_fuel" : "ready"),
+      cleaningStatus: updateType.value === "customer" ? "unknown" : (updateCleaningStatus.checked ? "needs_cleaning" : "clean"),
       stage,
       note: updateNote.value,
       status: "IN",
       action: "Location updated",
-      mileage: latest.mileage || "",
+      mileage: updateMileage.value,
       parkingLocation,
       position
     });
 
     await addRecord(record);
     updatePanel.classList.add("hidden");
+    updateMileage.value = "";
     updateNote.value = "";
   } finally {
     button.disabled = false;
@@ -1622,6 +1960,9 @@ loginForm.addEventListener("submit", async event => {
 
 signOutBtn.addEventListener("click", async () => {
   showLoading();
+  fleetContent.replaceChildren();
+  searchResultsState.records = [];
+  vehicleResult.innerHTML = `<p>Search for a registration to view the latest status, location, and movement history.</p>`;
   const { error } = await db.auth.signOut();
 
   if (error) {
@@ -1699,6 +2040,7 @@ async function initialiseAuth() {
 }
 
 initialiseTheme();
+populateVehicleAndReadinessOptions();
 populateStageOptions();
 populateParkingLocations();
 resetCheckInParking();

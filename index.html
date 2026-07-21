@@ -82,13 +82,24 @@
 
         <div>
           <label for="checkInType">Vehicle type</label>
-          <select id="checkInType">
-            <option>Customer vehicle</option>
-            <option>Loan / courtesy car</option>
-            <option>Stock vehicle</option>
-            <option>Demo vehicle</option>
-            <option>Other</option>
-          </select>
+          <select id="checkInType" required></select>
+        </div>
+
+        <div id="checkInReadinessFields" class="two-column readiness-fields hidden">
+          <div class="readiness-toggle">
+            <span class="toggle-label">Needs fuel</span>
+            <label class="toggle-switch" for="checkInFuelStatus" aria-label="Vehicle needs fuel">
+              <input id="checkInFuelStatus" type="checkbox" />
+              <span class="toggle-slider" aria-hidden="true"></span>
+            </label>
+          </div>
+          <div class="readiness-toggle">
+            <span class="toggle-label">Needs cleaning</span>
+            <label class="toggle-switch" for="checkInCleaningStatus" aria-label="Vehicle needs cleaning">
+              <input id="checkInCleaningStatus" type="checkbox" />
+              <span class="toggle-slider" aria-hidden="true"></span>
+            </label>
+          </div>
         </div>
 
         <div>
@@ -115,7 +126,7 @@
           <p class="field-help">Max 150 characters</p>
         </div>
 
-        <button type="submit" class="primary-button">Check In & Save Location</button>
+        <button type="submit" class="primary-button">Check In</button>
         <p id="checkInMessage" class="form-message" aria-live="polite"></p>
         
       </form>
@@ -138,16 +149,42 @@
 
     <section id="updatePanel" class="panel home-section hidden">
       <div class="panel-heading">
-        <p class="eyebrow">After moving vehicle</p>
-        <h2 id="updateTitle">Update location</h2>
+        <h2 id="updateTitle">Update vehicle</h2>
       </div>
 
       <form id="updateForm" class="form-stack">
         <input id="updateReg" type="hidden" />
 
         <div>
+          <label for="updateType">Vehicle type</label>
+          <select id="updateType" required></select>
+        </div>
+
+        <div>
           <label for="updateStage">Current stage</label>
           <select id="updateStage"></select>
+        </div>
+
+        <div>
+          <label for="updateMileage">Mileage</label>
+          <input id="updateMileage" type="text" inputmode="numeric" pattern="[0-9]*" maxlength="7" placeholder="e.g. 42185" autocomplete="off" />
+        </div>
+
+        <div id="updateReadinessFields" class="two-column readiness-fields hidden">
+          <div class="readiness-toggle">
+            <span class="toggle-label">Needs fuel</span>
+            <label class="toggle-switch" for="updateFuelStatus" aria-label="Vehicle needs fuel">
+              <input id="updateFuelStatus" type="checkbox" />
+              <span class="toggle-slider" aria-hidden="true"></span>
+            </label>
+          </div>
+          <div class="readiness-toggle">
+            <span class="toggle-label">Needs cleaning</span>
+            <label class="toggle-switch" for="updateCleaningStatus" aria-label="Vehicle needs cleaning">
+              <input id="updateCleaningStatus" type="checkbox" />
+              <span class="toggle-slider" aria-hidden="true"></span>
+            </label>
+          </div>
         </div>
 
         <div>
@@ -176,7 +213,7 @@
         </div>
 
         <div class="action-grid">
-          <button type="submit" class="primary-button">Save New Location</button>
+          <button type="submit" class="primary-button">Save Update</button>
           <button id="cancelUpdateBtn" type="button" class="ghost-button">Cancel</button>
         </div>
         <p id="updateMessage" class="form-message" aria-live="polite"></p>
@@ -206,6 +243,17 @@
 
       <div id="statsContent" class="stats-content" aria-live="polite"></div>
     </section>
+
+    <section id="fleetView" class="fleet-view hidden" aria-labelledby="fleetTitle">
+      <div class="stats-header-card fleet-header-card">
+        <div>
+          <p class="eyebrow">Vehicle Fleet</p>
+          <h2 id="fleetTitle">Availability and readiness</h2>
+        </div>
+        <button id="fleetRetryBtn" class="ghost-button" type="button">Refresh</button>
+      </div>
+      <div id="fleetContent" class="fleet-content" aria-live="polite"></div>
+    </section>
   </main>
 
   <div id="profileDrawerOverlay" class="profile-drawer-overlay" aria-hidden="true"></div>
@@ -227,6 +275,9 @@
       </button>
       <button id="myStatsNavBtn" class="profile-drawer-item" type="button">
         <span>My Stats</span>
+      </button>
+      <button id="vehicleFleetNavBtn" class="profile-drawer-item" type="button">
+        <span>Vehicle Fleet</span>
       </button>
       <div class="profile-drawer-item profile-drawer-item-disabled">
         <span>Car park audit / scan</span>
