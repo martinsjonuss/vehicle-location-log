@@ -3,7 +3,7 @@
     "registration": "AB12CDE",
     "status": "IN",
     "stage": "Checked In",
-    "vehicleType": "Customer vehicle",
+    "vehicleType": "customer",
     "mileage": "42185",
     "parkingLocation": "Drive Thru",
     "note": "Example placeholder only. App records are saved in Supabase."
@@ -12,7 +12,7 @@
     "registration": "LR24DEMO",
     "status": "IN",
     "stage": "Ready for Customer",
-    "vehicleType": "Loan / courtesy car",
+    "vehicleType": "loan",
     "mileage": "",
     "parkingLocation": "Drive Thru",
     "note": "Sample for future shared database development."
