@@ -30,7 +30,6 @@ const statsPeriod = document.getElementById("statsPeriod");
 const statsContent = document.getElementById("statsContent");
 const fleetView = document.getElementById("fleetView");
 const fleetContent = document.getElementById("fleetContent");
-const fleetRetryBtn = document.getElementById("fleetRetryBtn");
 const homeSections = document.querySelectorAll(".home-section");
 
 const checkInForm = document.getElementById("checkInForm");
@@ -64,6 +63,9 @@ const updateGpsEnabled = document.getElementById("updateGpsEnabled");
 const updateNote = document.getElementById("updateNote");
 const updateMessage = document.getElementById("updateMessage");
 const cancelUpdateBtn = document.getElementById("cancelUpdateBtn");
+const updatePanelHomeParent = updatePanel.parentNode;
+const updatePanelHomeNextSibling = updatePanel.nextElementSibling;
+let updatePanelIsInline = false;
 
 const activityList = document.getElementById("activityList");
 const parkingMapButtons = document.querySelectorAll(".parking-map-info");
@@ -368,6 +370,7 @@ function setActiveNav(activeButton) {
 }
 
 function showHomeView() {
+  restoreUpdatePanel();
   if (location.hash) history.replaceState(null, "", location.pathname + location.search);
   revealHomeView();
   closeProfileDrawer(false);
@@ -380,6 +383,7 @@ function goHome() {
 }
 
 async function showStatsView() {
+  restoreUpdatePanel();
   history.replaceState(null, "", "#stats");
   currentPage = "stats";
   updatePanel.classList.add("hidden");
@@ -949,6 +953,7 @@ async function addRecord(record) {
 
   await renderActivity();
   if (currentPage === "fleet") {
+    restoreUpdatePanel();
     await renderVehicleFleetPaged();
   } else if (currentPage === "stats") {
     await renderMyStats();
@@ -1241,14 +1246,34 @@ function renderSearchResultsPage() {
   }
 }
 
-async function openUpdatePanel(reg) {
+function restoreUpdatePanel() {
+  if (!updatePanelIsInline) return;
+  if (updatePanelHomeNextSibling?.parentNode === updatePanelHomeParent) {
+    updatePanelHomeParent.insertBefore(updatePanel, updatePanelHomeNextSibling);
+  } else {
+    updatePanelHomeParent.appendChild(updatePanel);
+  }
+  updatePanelIsInline = false;
+  updatePanel.classList.add("hidden");
+  updatePanel.classList.toggle("page-hidden", currentPage !== "home");
+}
+
+async function openUpdatePanel(reg, inlineContainer = null) {
   const latest = await getLatestRecord(reg);
   if (!latest) return;
+
+  restoreUpdatePanel();
+  if (inlineContainer) {
+    inlineContainer.appendChild(updatePanel);
+    updatePanelIsInline = true;
+    updatePanel.classList.remove("page-hidden");
+  }
 
   updateReg.value = latest.reg;
   updateType.value = VEHICLE_TYPES.some(type => type.value === latest.vehicleType) ? latest.vehicleType : "";
   updateMileage.value = latest.mileage ?? "";
   updateNote.value = "";
+  updateMessage.textContent = "";
   updateFuelStatus.checked = latest.fuelStatus === "needs_fuel";
   updateCleaningStatus.checked = latest.cleaningStatus === "needs_cleaning";
   applyUpdateReadinessVisibility();
@@ -1324,7 +1349,7 @@ function renderFleetVehicle(record) {
     <div class="fleet-vehicle-heading"><span class="registration-plate">${escapeHtml(formatRegistration(record.reg))}</span><span class="activity-status ${isIn ? "status-in" : "status-out"}">${record.status}</span></div>
     ${isIn ? `<div class="fleet-vehicle-details"><span><strong>Location:</strong> ${escapeHtml(record.parkingLocation || "Not recorded")}</span>${record.vehicleType !== "customer" && hasRecordedReadiness(record.fuelStatus) ? `<span><strong>Fuel:</strong> ${escapeHtml(readinessLabel("fuel", record.fuelStatus))}</span>` : ""}${record.vehicleType !== "customer" && hasRecordedReadiness(record.cleaningStatus) ? `<span><strong>Cleaning:</strong> ${escapeHtml(readinessLabel("cleaning", record.cleaningStatus))}</span>` : ""}${record.stage ? `<span><strong>Stage:</strong> ${escapeHtml(record.stage)}</span>` : ""}</div>` : `<p class="fleet-out-detail">Marked out ${escapeHtml(formatTime(record.createdAt))}</p>`}
     <p class="fleet-updated">Updated ${escapeHtml(formatTime(record.createdAt))}${record.staff ? ` by ${escapeHtml(record.staff)}` : ""}</p>
-    <div class="fleet-actions">${isIn ? `<button class="ghost-button" type="button" data-fleet-action="update">Update</button><button class="secondary-button" type="button" data-fleet-action="out">Mark OUT</button>` : `<button class="primary-button" type="button" data-fleet-action="checkin">Check In</button>`}<button class="ghost-button" type="button" data-fleet-action="history">View history</button></div>
+    <div class="fleet-actions">${isIn ? `<button class="ghost-button" type="button" data-fleet-action="update">Update</button><button class="ghost-button" type="button" data-fleet-action="history">View history</button><button class="secondary-button" type="button" data-fleet-action="out">Mark OUT</button>` : `<button class="primary-button" type="button" data-fleet-action="checkin">Check In</button><button class="ghost-button" type="button" data-fleet-action="history">View history</button>`}</div>
   </article>`;
 }
 
@@ -1351,8 +1376,8 @@ async function renderVehicleFleet() {
   } finally { fleetContent.removeAttribute("aria-busy"); }
 }
 
-function wireFleetActions() {
-  fleetContent.querySelectorAll("[data-fleet-action]").forEach(button => button.addEventListener("click", async () => {
+function wireFleetActions(root = fleetContent) {
+  root.querySelectorAll("[data-fleet-action]").forEach(button => button.addEventListener("click", async () => {
     const reg = button.closest("[data-reg]")?.dataset.reg;
     if (!reg || button.disabled) return;
     button.disabled = true;
@@ -1360,15 +1385,24 @@ function wireFleetActions() {
       const action = button.dataset.fleetAction;
       if (action === "out") {
         await markVehicleOut(reg);
-        if (currentPage === "fleet") await renderVehicleFleetPaged();
       } else if (action === "checkin") {
         const latest = await getLatestRecord(reg);
         if (latest) prepareVehicleCheckIn(latest);
+      } else if (action === "update") {
+        const card = button.closest(".fleet-vehicle-card");
+        if (!card) return;
+        if (updatePanelIsInline && card.contains(updatePanel) && !updatePanel.classList.contains("hidden")) {
+          restoreUpdatePanel();
+          return;
+        }
+        fleetContent.querySelectorAll(".fleet-history-panel").forEach(panel => panel.remove());
+        await openUpdatePanel(reg, card);
       } else {
-        showHomeView();
-        await renderVehicleResult(reg);
-        if (action === "update") await openUpdatePanel(reg);
-        else await toggleVehicleHistory(reg);
+        const card = button.closest(".fleet-vehicle-card");
+        if (card) {
+          restoreUpdatePanel();
+          await toggleFleetHistory(card, reg);
+        }
       }
     } finally { if (button.isConnected) button.disabled = false; }
   }));
@@ -1376,16 +1410,21 @@ function wireFleetActions() {
 
 async function renderVehicleFleetPaged() {
   if (!currentAuthUser || currentPage !== "fleet") return;
+  restoreUpdatePanel();
   fleetContent.innerHTML = `<div class="empty-state">Loading vehicle fleet...</div>`;
   fleetContent.setAttribute("aria-busy", "true");
 
   try {
-    const countResults = await Promise.all(VEHICLE_TYPES.flatMap(type => [
-      db.from("current_vehicle_fleet").select("id", { count: "exact", head: true }).eq("vehicle_type", type.value),
-      db.from("current_vehicle_fleet").select("id", { count: "exact", head: true }).eq("vehicle_type", type.value).eq("status", "IN")
-    ]));
-    const totalResult = await db.from("current_vehicle_fleet").select("id", { count: "exact", head: true });
-    const failedResult = [...countResults, totalResult].find(result => result.error);
+    const countResults = await Promise.all(VEHICLE_TYPES.flatMap(type => {
+      let totalQuery = db.from("current_vehicle_fleet").select("id", { count: "exact", head: true }).eq("vehicle_type", type.value);
+      let availableQuery = db.from("current_vehicle_fleet").select("id", { count: "exact", head: true }).eq("vehicle_type", type.value).eq("status", "IN");
+      if (type.value === "customer") {
+        totalQuery = totalQuery.eq("stage", READY_FOR_CUSTOMER_STAGE);
+        availableQuery = availableQuery.eq("stage", READY_FOR_CUSTOMER_STAGE);
+      }
+      return [totalQuery, availableQuery];
+    }));
+    const failedResult = countResults.find(result => result.error);
     if (failedResult) throw failedResult.error;
 
     const counts = VEHICLE_TYPES.map((type, index) => ({
@@ -1393,10 +1432,9 @@ async function renderVehicleFleetPaged() {
       total: countResults[index * 2].count || 0,
       available: countResults[index * 2 + 1].count || 0
     }));
-    const categorisedTotal = counts.reduce((sum, category) => sum + category.total, 0);
-    const legacyCount = Math.max((totalResult.count || 0) - categorisedTotal, 0);
+    const hasCategorisedVehicles = counts.some(category => category.total > 0);
 
-    fleetContent.innerHTML = `${totalResult.count ? "" : `<div class="empty-state fleet-empty-state">No vehicle data is available to your account.</div>`}${legacyCount ? `<div class="fleet-notice">${legacyCount} unique vehicle registration${legacyCount === 1 ? " has" : "s have"} a legacy or missing category. Combined Loan / Courtesy records cannot be split safely and remain available through search until updated.</div>` : ""}${counts.map(({ type, total, available }) => `
+    fleetContent.innerHTML = `${hasCategorisedVehicles ? "" : `<div class="empty-state fleet-empty-state">No categorised vehicle data is available to your account.</div>`}${counts.map(({ type, total, available }) => `
       <details class="fleet-category" data-fleet-type="${type.value}" data-total="${total}">
         <summary><span class="fleet-category-name">${type.label}</span><span class="fleet-category-count">${available} available / ${total} total</span><span class="fleet-chevron" aria-hidden="true">⌄</span></summary>
         <div class="fleet-vehicle-list"><div class="empty-state">Open this category to load vehicles.</div></div>
@@ -1415,6 +1453,7 @@ async function renderVehicleFleetPaged() {
 }
 
 async function loadFleetCategoryPage(category, page) {
+  restoreUpdatePanel();
   const list = category.querySelector(".fleet-vehicle-list");
   const total = Number(category.dataset.total || 0);
   const totalPages = Math.max(Math.ceil(total / FLEET_RECORDS_PER_PAGE), 1);
@@ -1424,9 +1463,13 @@ async function loadFleetCategoryPage(category, page) {
   list.setAttribute("aria-busy", "true");
 
   try {
-    const { data, error } = await db.from("current_vehicle_fleet")
+    let categoryQuery = db.from("current_vehicle_fleet")
       .select("*")
-      .eq("vehicle_type", category.dataset.fleetType)
+      .eq("vehicle_type", category.dataset.fleetType);
+    if (category.dataset.fleetType === "customer") {
+      categoryQuery = categoryQuery.eq("stage", READY_FOR_CUSTOMER_STAGE);
+    }
+    const { data, error } = await categoryQuery
       .order("status", { ascending: true })
       .order("created_at", { ascending: false })
       .range(from, from + FLEET_RECORDS_PER_PAGE - 1);
@@ -1439,7 +1482,7 @@ async function loadFleetCategoryPage(category, page) {
         <button class="ghost-button" type="button" data-fleet-page="${safePage + 1}" ${safePage === totalPages ? "disabled" : ""}>Next</button>
       </div>` : ""}`;
     category.dataset.loaded = "true";
-    wireFleetActionsIn(list);
+    wireFleetActions(list);
     list.querySelectorAll("[data-fleet-page]").forEach(button => button.addEventListener("click", () => loadFleetCategoryPage(category, Number(button.dataset.fleetPage))));
   } catch (error) {
     console.error(error);
@@ -1450,29 +1493,48 @@ async function loadFleetCategoryPage(category, page) {
   }
 }
 
-function wireFleetActionsIn(root) {
-  root.querySelectorAll("[data-fleet-action]").forEach(button => button.addEventListener("click", async () => {
-    const reg = button.closest("[data-reg]")?.dataset.reg;
-    if (!reg || button.disabled) return;
-    button.disabled = true;
-    try {
-      const action = button.dataset.fleetAction;
-      if (action === "out") {
-        await markVehicleOut(reg);
-        if (currentPage === "fleet") await renderVehicleFleetPaged();
-      } else if (action === "checkin") {
-        const latest = await getLatestRecord(reg);
-        if (latest) prepareVehicleCheckIn(latest);
-      } else {
-        showHomeView();
-        await renderVehicleResult(reg);
-        if (action === "update") await openUpdatePanel(reg);
-        else await toggleVehicleHistory(reg);
-      }
-    } finally {
-      if (button.isConnected) button.disabled = false;
-    }
-  }));
+async function toggleFleetHistory(card, reg, page = 1, forceOpen = false) {
+  let panel = card.querySelector(":scope > .fleet-history-panel");
+  if (panel && !forceOpen) {
+    panel.remove();
+    return;
+  }
+  fleetContent.querySelectorAll(".fleet-history-panel").forEach(openPanel => openPanel.remove());
+  if (!panel) {
+    panel = document.createElement("div");
+    panel.className = "fleet-history-panel";
+    card.appendChild(panel);
+  } else if (!panel.isConnected) {
+    card.appendChild(panel);
+  }
+
+  panel.innerHTML = `<div class="empty-state">Loading movement history...</div>`;
+  panel.setAttribute("aria-busy", "true");
+  try {
+    const from = (page - 1) * FLEET_RECORDS_PER_PAGE;
+    const { data, error, count } = await db.from("vehicle_movements")
+      .select("*", { count: "exact" })
+      .eq("registration", normaliseReg(reg))
+      .order("created_at", { ascending: false })
+      .range(from, from + FLEET_RECORDS_PER_PAGE - 1);
+    if (error) throw error;
+    const history = (data || []).map(mapDbRecord);
+    const totalPages = Math.max(Math.ceil((count || 0) / FLEET_RECORDS_PER_PAGE), 1);
+    panel.innerHTML = `<div class="fleet-history-heading"><strong>Movement history</strong><span>${count || 0} movement${count === 1 ? "" : "s"}</span></div>
+      <div class="fleet-history-list">${history.length ? history.map(record => `
+        <article class="history-card">
+          <div class="history-top"><span class="history-stage">${escapeHtml(record.stage || "Not specified")}</span><span class="history-time">${escapeHtml(formatTime(record.createdAt))}</span></div>
+          <p class="history-note">${escapeHtml(movementLine(record))}</p>
+        </article>`).join("") : `<div class="empty-state">No movement history recorded.</div>`}</div>
+      ${totalPages > 1 ? `<div class="fleet-pagination"><button class="ghost-button" type="button" data-history-page="${page - 1}" ${page === 1 ? "disabled" : ""}>Previous</button><span class="pagination-status">Page ${page} of ${totalPages}</span><button class="ghost-button" type="button" data-history-page="${page + 1}" ${page === totalPages ? "disabled" : ""}>Next</button></div>` : ""}`;
+    panel.querySelectorAll("[data-history-page]").forEach(button => button.addEventListener("click", () => toggleFleetHistory(card, reg, Number(button.dataset.historyPage), true)));
+  } catch (error) {
+    console.error(error);
+    panel.innerHTML = `<div class="empty-state fleet-error-state"><p>Movement history could not be loaded.</p><button class="ghost-button" type="button" data-history-retry>Try again</button></div>`;
+    panel.querySelector("[data-history-retry]")?.addEventListener("click", () => toggleFleetHistory(card, reg, page, true));
+  } finally {
+    panel.removeAttribute("aria-busy");
+  }
 }
 
 async function renderActivity() {
@@ -1756,7 +1818,6 @@ myStatsNavBtn.addEventListener("click", () => {
   });
 });
 vehicleFleetNavBtn.addEventListener("click", () => showFleetView());
-fleetRetryBtn.addEventListener("click", renderVehicleFleetPaged);
 heroCard.addEventListener("click", goHome);
 heroCard.addEventListener("keydown", event => {
   if (event.key === "Enter" || event.key === " ") {
@@ -1924,6 +1985,7 @@ updateForm.addEventListener("submit", async event => {
 
 cancelUpdateBtn.addEventListener("click", () => {
   updatePanel.classList.add("hidden");
+  restoreUpdatePanel();
 });
 
 checkInGpsEnabled.addEventListener("change", () => setGpsEnabled(checkInGpsEnabled.checked));
