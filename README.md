@@ -136,6 +136,7 @@ Marked OUT
 * Shows availability plus fuel and cleaning readiness for non-Customer vehicles
 * Uses Needs fuel and Needs cleaning switches in check-in and update forms; off means ready and on means attention is required
 * Provides contextual check-in, update, mark-out and history actions
+* Reuses the update form inline beneath Fleet records and shows movement history inline in pages of five
 * Uses the database-side `current_vehicle_fleet` view for one current row per registration
 
 ---

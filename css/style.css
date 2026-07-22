@@ -717,7 +717,12 @@ button:disabled {
 .fleet-actions { margin-top: 13px; display: flex; flex-wrap: wrap; gap: 8px; }
 .fleet-actions button { min-height: 44px; flex: 1 1 110px; padding: 9px 12px; }
 .fleet-pagination { display: grid; grid-template-columns: 1fr auto 1fr; gap: 10px; align-items: center; }
-.fleet-notice { padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--accent-soft); color: var(--text); font-size: .86rem; }
+.fleet-vehicle-card > #updatePanel { margin-top: 14px; box-shadow: none; }
+.fleet-history-panel { margin-top: 14px; padding-top: 14px; display: grid; gap: 10px; border-top: 1px solid var(--line); }
+.fleet-history-heading { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; }
+.fleet-history-heading span { color: var(--muted); font-size: .8rem; }
+.fleet-history-list { display: grid; gap: 8px; }
+.fleet-history-list .history-card { cursor: default; }
 .fleet-error-state p { margin-bottom: 12px; }
 
 .stats-header-card,
